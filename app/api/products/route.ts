@@ -14,7 +14,8 @@ const createSchema = z.object({
 
 export async function GET() {
   const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session?.user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const restaurantId = (session.user as any).restaurantId;
 
   const result = await db
@@ -28,14 +29,17 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session?.user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const userRole = (session.user as any).role;
-  if (userRole !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (userRole !== "admin")
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const restaurantId = (session.user as any).restaurantId;
 
   const body = await req.json();
   const parsed = createSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.message }, { status: 400 });
+  if (!parsed.success)
+    return NextResponse.json({ error: parsed.error.message }, { status: 400 });
 
   const id = crypto.randomUUID();
   await db.insert(products).values({ id, restaurantId, ...parsed.data });

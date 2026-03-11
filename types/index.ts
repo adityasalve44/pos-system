@@ -25,6 +25,14 @@ export interface User {
   isActive: number;
   createdAt: Date;
 }
+
+export interface SessionUser{
+  id: string;
+  restaurantId: string;
+  name: string;
+  email: string;
+  role: UserRole;
+}
 export interface Category {
   id: string;
   restaurantId: string;
