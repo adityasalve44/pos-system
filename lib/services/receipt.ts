@@ -1,6 +1,6 @@
 import "server-only";
 import { db } from "@/lib/db/client";
-import { orders, orderItems, restaurants, tables, payments, users } from "@/lib/db/schema";
+import { orders, orderItems, restaurants, tables, payments } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { formatDateTime } from "@/lib/utils/format";
 

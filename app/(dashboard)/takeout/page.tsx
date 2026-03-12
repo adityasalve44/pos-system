@@ -40,7 +40,7 @@ export default function TakeoutPage() {
         <div className="text-center py-20">
           <Package size={44} className="text-gray-200 mx-auto mb-3" />
           <p className="text-gray-400 font-medium">No active takeout orders</p>
-          <p className="text-gray-400 text-sm mt-1">Tap "New Takeout" to create one</p>
+          <p className="text-gray-400 text-sm mt-1">Tap &quot;New Takeout&quot; to create one</p>
         </div>
       ) : (
         <div className="space-y-3">

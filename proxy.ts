@@ -1,36 +1,64 @@
-import { auth } from "@/auth";
-import { NextResponse } from "next/server";
+/**
+ * proxy.ts — Next.js 16 request interception layer.
+ *
+ * Next.js 16 renames middleware.ts → proxy.ts and the export from
+ * `middleware` → `proxy`. The logic is identical.
+ *
+ * Uses next-auth v4's getToken() to read the JWT from the request cookie.
+ * No database call is made here — JWT verification is cryptographic only.
+ * All real permission checks are re-enforced inside each API route handler.
+ */
+import { NextRequest, NextResponse } from "next/server";
+import { getToken } from "next-auth/jwt";
 import { canAccessRoute } from "@/lib/rbac";
-import type { Role } from "@/lib/rbac";
 
-export default auth((req) => {
-  const { nextUrl, auth: session } = req;
-  const pathname = nextUrl.pathname;
+/** Paths that never need auth checks */
+const PUBLIC_PATHS = new Set(["/login"]);
 
-  const isApiAuth = pathname.startsWith("/api/auth");
-  const isLoginPage = pathname === "/login";
-  const isLoggedIn = !!session;
-  const role = (session?.user as any)?.role as Role | undefined;
+function isPassthrough(pathname: string): boolean {
+  return (
+    pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/favicon")
+  );
+}
 
-  // Always allow NextAuth callbacks and static assets
-  if (isApiAuth) return NextResponse.next();
+export async function proxy(request: NextRequest): Promise<NextResponse> {
+  const pathname = request.nextUrl.pathname;
 
-  // Redirect logged-in users away from login page
-  if (isLoginPage && isLoggedIn)
-    return NextResponse.redirect(new URL("/tables", nextUrl));
+  if (isPassthrough(pathname)) return NextResponse.next();
 
-  // Redirect unauthenticated users to login
-  if (!isLoginPage && !isLoggedIn)
-    return NextResponse.redirect(new URL("/login", nextUrl));
+  const isPublic = PUBLIC_PATHS.has(pathname);
 
-  // Role-based page guard — redirect unauthorized roles to /tables (their home)
-  if (isLoggedIn && !isLoginPage && !canAccessRoute(role, pathname)) {
-    return NextResponse.redirect(new URL("/tables", nextUrl));
+  // next-auth v4: getToken reads the JWT from the `next-auth.session-token` cookie
+  const token = await getToken({
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET,
+  });
+
+  const isLoggedIn = !!token;
+  // token is typed as JWT (from types/next-auth.d.ts), so token.role is UserRole
+  const role = token?.role;
+
+  if (isPublic && isLoggedIn) {
+    return NextResponse.redirect(new URL("/tables", request.nextUrl));
+  }
+
+  if (!isPublic && !isLoggedIn) {
+    const loginUrl = new URL("/login", request.nextUrl);
+    loginUrl.searchParams.set("callbackUrl", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  if (isLoggedIn && !isPublic && !canAccessRoute(role, pathname)) {
+    return NextResponse.redirect(new URL("/tables", request.nextUrl));
   }
 
   return NextResponse.next();
-});
+}
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.png$).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)",
+  ],
 };

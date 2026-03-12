@@ -1,145 +1,105 @@
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/lib/db/client";
 import { users } from "@/lib/db/schema";
-import { can } from "@/lib/rbac";
-import type { Role } from "@/lib/rbac";
 import { eq, and } from "drizzle-orm";
+import { z } from "zod";
 import bcrypt from "bcryptjs";
+import { can } from "@/lib/rbac";
 
-export async function GET(req: Request) {
-  try {
-    const session = await auth();
+/** Columns returned to the client — never expose passwordHash */
+const PUBLIC_COLS = {
+  id: users.id,
+  name: users.name,
+  email: users.email,
+  role: users.role,
+  isActive: users.isActive,
+  createdAt: users.createdAt,
+} as const;
 
-    // ── Auth & Authorization ──────────────────────────────────────────────
-    if (!session?.user?.id) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    
-    const role = (session.user as any).role as Role;
-    if (!can(role, "staff_view")) {
-      return Response.json({ error: "Forbidden" }, { status: 403 });
-    }
+const createSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100),
+  email: z.string().email("Invalid email"),
+  password: z.string().min(6, "Password must be at least 6 characters").max(72),
+  /** Admin cannot create another admin through the UI */
+  role: z.enum(["manager", "staff"]),
+});
 
-    const restaurantId = (session.user as any).restaurantId;
-
-    // ── Query all active staff for this restaurant ──────────────────────────
-    const staff = await db
-      .select({
-        id: users.id,
-        name: users.name,
-        email: users.email,
-        role: users.role,
-        isActive: users.isActive,
-        createdAt: users.createdAt,
-      })
-      .from(users)
-      .where(
-        and(
-          eq(users.restaurantId, restaurantId),
-          eq(users.isActive, 1)
-        )
-      );
-
-    return Response.json({ data: staff });
-  } catch (err) {
-    console.error("[GET /api/staff]", err);
-    return Response.json(
-      { error: "Failed to fetch staff" },
-      { status: 500 }
-    );
+export async function GET(): Promise<NextResponse> {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  if (!can(session.user.role, "staff_view")) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const staff = await db
+    .select(PUBLIC_COLS)
+    .from(users)
+    .where(eq(users.restaurantId, session.user.restaurantId))
+    .orderBy(users.role, users.name);
+
+  return NextResponse.json({ data: staff });
 }
 
-export async function POST(req: Request) {
-  try {
-    const session = await auth();
+export async function POST(req: NextRequest): Promise<NextResponse> {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-    // ── Auth & Authorization ──────────────────────────────────────────────
-    if (!session?.user?.id) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    
-    const role = (session.user as any).role as Role;
-    if (!can(role, "staff_manage")) {
-      return Response.json({ error: "Forbidden" }, { status: 403 });
-    }
+  if (!can(session.user.role, "staff_manage")) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
-    const restaurantId = (session.user as any).restaurantId;
-    const body = await req.json();
-
-    // ── Validate input ────────────────────────────────────────────────────
-    const { name, email, password, role: staffRole } = body;
-
-    if (!name || !email || !password) {
-      return Response.json(
-        { error: "Missing required fields: name, email, password" },
-        { status: 400 }
-      );
-    }
-
-    if (password.length < 6) {
-      return Response.json(
-        { error: "Password must be at least 6 characters" },
-        { status: 400 }
-      );
-    }
-
-    if (!["admin", "manager", "staff"].includes(staffRole)) {
-      return Response.json(
-        { error: "Invalid role. Must be admin, manager, or staff" },
-        { status: 400 }
-      );
-    }
-
-    // ── Check for duplicate email ──────────────────────────────────────────
-    const existing = await db
-      .select({ id: users.id })
-      .from(users)
-      .where(eq(users.email, email))
-      .limit(1);
-
-    if (existing.length > 0) {
-      return Response.json(
-        { error: "Email already in use" },
-        { status: 409 }
-      );
-    }
-
-    // ── Hash password ─────────────────────────────────────────────────────
-    const passwordHash = await bcrypt.hash(password, 10);
-
-    // ── Create staff member ───────────────────────────────────────────────
-    const userId = crypto.randomUUID();
-    await db.insert(users).values({
-      id: userId,
-      restaurantId,
-      name,
-      email,
-      passwordHash,
-      role: staffRole || "staff",
-      isActive: 1,
-    });
-
-    // ── Fetch and return the created user ─────────────────────────────────
-    const [newUser] = await db
-      .select({
-        id: users.id,
-        name: users.name,
-        email: users.email,
-        role: users.role,
-        isActive: users.isActive,
-        createdAt: users.createdAt,
-      })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
-
-    return Response.json({ data: newUser }, { status: 201 });
-  } catch (err) {
-    console.error("[POST /api/staff]", err);
-    return Response.json(
-      { error: "Failed to create staff member" },
-      { status: 500 }
+  const body: unknown = await req.json();
+  const parsed = createSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0].message },
+      { status: 400 },
     );
   }
+
+  const { restaurantId } = session.user;
+
+  // Enforce uniqueness within the restaurant
+  const [existing] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(
+      and(
+        eq(users.email, parsed.data.email),
+        eq(users.restaurantId, restaurantId),
+      ),
+    )
+    .limit(1);
+
+  if (existing) {
+    return NextResponse.json(
+      { error: "A user with this email already exists" },
+      { status: 409 },
+    );
+  }
+
+  const id = crypto.randomUUID();
+  const passwordHash = await bcrypt.hash(parsed.data.password, 12);
+
+  await db.insert(users).values({
+    id,
+    restaurantId,
+    name: parsed.data.name,
+    email: parsed.data.email,
+    passwordHash,
+    role: parsed.data.role,
+  });
+
+  const [created] = await db
+    .select(PUBLIC_COLS)
+    .from(users)
+    .where(eq(users.id, id));
+
+  return NextResponse.json({ data: created }, { status: 201 });
 }

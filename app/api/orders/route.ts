@@ -8,7 +8,7 @@ import { z } from "zod";
 export async function GET() {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const restaurantId = (session.user as any).restaurantId;
+  const restaurantId = session.user.restaurantId;
   const data = await db.select().from(orders)
     .where(and(eq(orders.restaurantId, restaurantId), inArray(orders.status, ["open", "billed"])))
     .orderBy(orders.openedAt);
@@ -18,7 +18,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const restaurantId = (session.user as any).restaurantId;
+  const restaurantId = session.user.restaurantId;
   const userId = session.user.id!;
 
   const parsed = z.object({

@@ -49,9 +49,9 @@ export default function ProductsPage() {
   }
   async function submitProduct() {
     if (!form.name || !form.category || !form.price) return;
-    editing
-      ? await updateProduct.mutateAsync({ id: editing.id, ...form })
-      : await createProduct.mutateAsync(form);
+    await (editing
+      ? updateProduct.mutateAsync({ id: editing.id, ...form })
+      : createProduct.mutateAsync(form));
     setShowProductForm(false);
   }
   async function addCategory() {

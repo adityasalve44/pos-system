@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/lib/db/client";
-import { orders, payments, orderItems } from "@/lib/db/schema";
+import { orders, payments,  } from "@/lib/db/schema";
 import { eq, and, between, sum, count } from "drizzle-orm";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const restaurantId = (session.user as any).restaurantId;
+  const restaurantId = session.user.restaurantId;
 
   const { searchParams } = new URL(req.url);
   const date = searchParams.get("date") ?? new Date().toISOString().slice(0, 10);

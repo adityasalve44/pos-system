@@ -15,7 +15,7 @@ export async function GET(
   const session = await auth();
   if (!session?.user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const restaurantId = (session.user as any).restaurantId;
+  const restaurantId = session.user.restaurantId;
   const { id } = await params;
 
   const [order] = await db
@@ -34,7 +34,7 @@ export async function POST(
 ) {
   const session = await auth();
   if (!session?.user) return new Response("Unauthorized", { status: 401 });
-  const restaurantId = (session.user as any).restaurantId;
+  const restaurantId = session.user.restaurantId;
   const { id } = await params;
 
   const [order] = await db

@@ -10,7 +10,7 @@ import type { Role } from "@/lib/rbac";
 export async function GET() {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const restaurantId = (session.user as any).restaurantId;
+  const restaurantId = session.user.restaurantId;
 
   const allTables = await db.select().from(tables)
     .where(and(eq(tables.restaurantId, restaurantId), eq(tables.isDeleted, 0)))
@@ -31,10 +31,10 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const role = (session.user as any).role as Role;
+  const role = session.user.role;
   if (!can(role, "tables_create"))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  const restaurantId = (session.user as any).restaurantId;
+  const restaurantId = session.user.restaurantId;
 
   const parsed = z.object({ name: z.string().min(1), capacity: z.number().min(1).default(4) }).safeParse(await req.json());
   if (!parsed.success) return NextResponse.json({ error: parsed.error.message }, { status: 400 });

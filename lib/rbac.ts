@@ -1,42 +1,41 @@
 /**
- * Central RBAC definitions
- * Import in both API routes (server) and UI components (client-safe).
+ * lib/rbac.ts — Role-based access control.
  *
- * Role hierarchy: admin > manager > staff
- *   admin   – full access, staff management, settings, all CRUD
- *   manager – operational access: tables, orders, reports. No settings/staff.
- *   staff   – create & work orders only. No cancel, no reports, no management.
+ * `Role` is re-exported from @/types as `UserRole` so the session augmentation
+ * and all RBAC helpers share a single type definition. No casts needed.
  */
+import type { UserRole } from "@/types";
 
-export type Role = "admin" | "manager" | "staff";
+/** Re-export so existing `import { Role } from "@/lib/rbac"` keep working */
+export type Role = UserRole;
 
 export const PERMISSIONS = {
-  // ── Tables ──────────────────────────────────────────────────────────────
+  // Tables
   tables_view:       ["admin", "manager", "staff"] as Role[],
   tables_create:     ["admin", "manager"] as Role[],
   tables_edit:       ["admin", "manager"] as Role[],
   tables_delete:     ["admin"] as Role[],
 
-  // ── Orders ──────────────────────────────────────────────────────────────
+  // Orders
   orders_create:     ["admin", "manager", "staff"] as Role[],
   orders_add_item:   ["admin", "manager", "staff"] as Role[],
   orders_bill:       ["admin", "manager", "staff"] as Role[],
   orders_pay:        ["admin", "manager", "staff"] as Role[],
   orders_cancel:     ["admin", "manager"] as Role[],
 
-  // ── Products / Categories ────────────────────────────────────────────────
+  // Products / Categories
   products_view:     ["admin", "manager", "staff"] as Role[],
   products_manage:   ["admin"] as Role[],
   categories_manage: ["admin"] as Role[],
 
-  // ── Reports ─────────────────────────────────────────────────────────────
+  // Reports
   reports_view:      ["admin", "manager"] as Role[],
 
-  // ── Settings ────────────────────────────────────────────────────────────
+  // Settings
   settings_view:     ["admin"] as Role[],
   settings_edit:     ["admin"] as Role[],
 
-  // ── Staff management ────────────────────────────────────────────────────
+  // Staff management
   staff_view:        ["admin"] as Role[],
   staff_manage:      ["admin"] as Role[],
 } as const;
@@ -50,11 +49,11 @@ export function can(role: Role | undefined | null, permission: Permission): bool
 
 export function requirePermission(role: Role | undefined | null, permission: Permission): void {
   if (!can(role, permission)) {
-    throw new Error(`Forbidden: requires ${PERMISSIONS[permission].join(" or ")} role`);
+    throw new Error(`Forbidden: requires ${(PERMISSIONS[permission] as Role[]).join(" or ")} role`);
   }
 }
 
-/** Page-level route → minimum roles allowed. Used in middleware. */
+/** Page-level route → minimum roles allowed. Used in proxy.ts. */
 export const ROUTE_ROLES: Record<string, Role[]> = {
   "/tables":   ["admin", "manager", "staff"],
   "/takeout":  ["admin", "manager", "staff"],

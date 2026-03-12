@@ -1,52 +1,75 @@
 "use client";
+
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
-import { formatDateTime } from "@/lib/utils/format";
 import {
   Plus,
   Pencil,
-  UserX,
-  UserCheck,
   Key,
-  X,
   ShieldCheck,
   Shield,
   User,
-  Users2,
+  UserX,
+  UserCheck,
+  X,
+  ChevronRight,
+  Search,
+  Users,
 } from "lucide-react";
+import type { UserRole } from "@/types";
 
-type StaffMember = {
+// ─── Domain types ─────────────────────────────────────────────────────────────
+
+interface StaffMember {
   id: string;
   name: string;
   email: string;
-  role: "admin" | "manager" | "staff";
+  role: UserRole;
   isActive: number;
   createdAt: string;
-};
+}
 
-const ROLE_META = {
+type ModalMode = "create" | "edit" | "reset_pw" | null;
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const ROLE_META: Record<
+  UserRole,
+  {
+    label: string;
+    Icon: React.ElementType;
+    badge: string;
+    pill: string;
+    ring: string;
+    desc: string;
+  }
+> = {
   admin: {
     label: "Admin",
-    icon: ShieldCheck,
-    color: "bg-red-100 text-red-700",
-    border: "border-red-200",
+    Icon: ShieldCheck,
+    badge: "bg-rose-50 text-rose-700 ring-rose-200",
+    pill: "bg-rose-100 text-rose-700",
+    ring: "ring-rose-300",
+    desc: "Full system access",
   },
   manager: {
     label: "Manager",
-    icon: Shield,
-    color: "bg-blue-100 text-blue-700",
-    border: "border-blue-200",
+    Icon: Shield,
+    badge: "bg-blue-50 text-blue-700 ring-blue-200",
+    pill: "bg-blue-100 text-blue-700",
+    ring: "ring-blue-300",
+    desc: "Tables, orders & reports",
   },
   staff: {
     label: "Staff",
-    icon: User,
-    color: "bg-gray-100 text-gray-700",
-    border: "border-gray-200",
+    Icon: User,
+    badge: "bg-gray-50 text-gray-600 ring-gray-200",
+    pill: "bg-gray-100 text-gray-600",
+    ring: "ring-gray-300",
+    desc: "Create & manage orders",
   },
 };
-
-type FormMode = "create" | "edit" | "reset_password" | null;
 
 const EMPTY_FORM = {
   name: "",
@@ -55,492 +78,686 @@ const EMPTY_FORM = {
   role: "staff" as "manager" | "staff",
 };
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function initials(name: string): string {
+  return name
+    .split(" ")
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function Avatar({
+  name,
+  role,
+  size = "md",
+}: {
+  name: string;
+  role: UserRole;
+  size?: "sm" | "md" | "lg";
+}) {
+  const { ring } = ROLE_META[role];
+  const sizeClass = {
+    sm: "w-8 h-8 text-xs",
+    md: "w-10 h-10 text-sm",
+    lg: "w-12 h-12 text-base",
+  }[size];
+  return (
+    <span
+      className={`${sizeClass} rounded-full ring-2 ${ring} bg-white flex items-center justify-center font-semibold text-gray-700 shrink-0`}
+    >
+      {initials(name)}
+    </span>
+  );
+}
+
+function RolePill({ role }: { role: UserRole }) {
+  const { label, pill } = ROLE_META[role];
+  return (
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${pill}`}
+    >
+      {label}
+    </span>
+  );
+}
+
+function InputField({
+  label,
+  type = "text",
+  value,
+  onChange,
+  placeholder,
+  autoFocus,
+}: {
+  label: string;
+  type?: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  autoFocus?: boolean;
+}) {
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+        {label}
+      </label>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        autoFocus={autoFocus}
+        className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm
+                   text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2
+                   focus:ring-blue-500 focus:border-transparent transition-shadow"
+      />
+    </div>
+  );
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
+
 export default function StaffPage() {
   const qc = useQueryClient();
   const { data: session } = useSession();
   const currentUserId = session?.user?.id;
 
-  const [mode, setMode] = useState<FormMode>(null);
-  const [target, setTarget] = useState<StaffMember | null>(null);
+  const [modal, setModal] = useState<ModalMode>(null);
+  const [selected, setSelected] = useState<StaffMember | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
-  const [pwForm, setPwForm] = useState({ password: "", confirm: "" });
-  const [pwError, setPwError] = useState("");
-  const [toast, setToast] = useState("");
+  const [pw, setPw] = useState({ password: "", confirm: "" });
+  const [pwErr, setPwErr] = useState("");
+  const [search, setSearch] = useState("");
+  const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
+  const [apiErr, setApiErr] = useState("");
 
-  // ── Data ──────────────────────────────────────────────────────────────────
+  // ── Data fetching ──────────────────────────────────────────────────────────
   const { data: staff = [], isLoading } = useQuery<StaffMember[]>({
     queryKey: ["staff"],
-    queryFn: async () => {
-      const res = await fetch("/api/staff");
-      return (await res.json()).data;
-    },
+    queryFn: () =>
+      fetch("/api/staff")
+        .then((r) => r.json())
+        .then((r: { data: StaffMember[] }) => r.data),
   });
 
-  function showToast(msg: string) {
-    setToast(msg);
-    setTimeout(() => setToast(""), 3000);
+  // ── Toast helper ──────────────────────────────────────────────────────────
+  function flash(msg: string, ok = true) {
+    setToast({ msg, ok });
+    setTimeout(() => setToast(null), 3000);
   }
+
   function closeModal() {
-    setMode(null);
-    setTarget(null);
+    setModal(null);
+    setSelected(null);
     setForm(EMPTY_FORM);
-    setPwForm({ password: "", confirm: "" });
-    setPwError("");
+    setPw({ password: "", confirm: "" });
+    setPwErr("");
+    setApiErr("");
   }
 
-  // ── Mutations ──────────────────────────────────────────────────────────────
-  const createStaff = useMutation({
-    mutationFn: (data: typeof EMPTY_FORM) =>
-      fetch("/api/staff", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      }).then(async (r) => {
-        const j = await r.json();
-        if (!r.ok) throw new Error(j.error);
-        return j.data;
-      }),
-    onSuccess: () => {
+  // ── Mutations ─────────────────────────────────────────────────────────────
+  async function apiCall(
+    url: string,
+    method: string,
+    body?: object,
+  ): Promise<{ ok: boolean; data?: StaffMember; error?: string }> {
+    const res = await fetch(url, {
+      method,
+      headers: body ? { "Content-Type": "application/json" } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const json: { data?: StaffMember; error?: string } = await res.json();
+    return { ok: res.ok, ...json };
+  }
+
+  const createMutation = useMutation({
+    mutationFn: () => apiCall("/api/staff", "POST", form),
+    onSuccess: (r) => {
+      if (!r.ok) {
+        setApiErr(r.error ?? "Failed");
+        return;
+      }
       qc.invalidateQueries({ queryKey: ["staff"] });
+      flash(`${form.name} added successfully`);
       closeModal();
-      showToast("Staff member created");
     },
-    onError: (e: Error) => showToast(e.message),
   });
 
-  const updateStaff = useMutation({
-    mutationFn: ({ id, ...data }: Partial<StaffMember> & { id: string }) =>
-      fetch(`/api/staff/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      }).then(async (r) => {
-        const j = await r.json();
-        if (!r.ok) throw new Error(j.error);
-        return j.data;
-      }),
-    onSuccess: () => {
+  const updateMutation = useMutation({
+    mutationFn: (payload: object) =>
+      apiCall(`/api/staff/${selected!.id}`, "PUT", payload),
+    onSuccess: (r) => {
+      if (!r.ok) {
+        setApiErr(r.error ?? "Failed");
+        return;
+      }
       qc.invalidateQueries({ queryKey: ["staff"] });
+      flash("Saved successfully");
       closeModal();
-      showToast("Updated");
     },
-    onError: (e: Error) => showToast(e.message),
   });
 
-  const toggleActive = useMutation({
+  const toggleMutation = useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: number }) =>
-      fetch(`/api/staff/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isActive }),
-      }).then(async (r) => {
-        const j = await r.json();
-        if (!r.ok) throw new Error(j.error);
-        return j.data;
-      }),
-    onSuccess: () => {
+      apiCall(`/api/staff/${id}`, "PUT", { isActive }),
+    onSuccess: (r, vars) => {
+      if (!r.ok) {
+        flash(r.error ?? "Failed", false);
+        return;
+      }
       qc.invalidateQueries({ queryKey: ["staff"] });
-      showToast("Status updated");
+      flash(vars.isActive === 1 ? "Account activated" : "Account deactivated");
     },
-    onError: (e: Error) => showToast(e.message),
   });
 
-  // ── Helpers ──────────────────────────────────────────────────────────────
+  // ── Handlers ──────────────────────────────────────────────────────────────
   function openCreate() {
-    setMode("create");
-    setTarget(null);
     setForm(EMPTY_FORM);
+    setModal("create");
   }
+
   function openEdit(s: StaffMember) {
-    setMode("edit");
-    setTarget(s);
+    setSelected(s);
     setForm({
       name: s.name,
       email: s.email,
       password: "",
       role: s.role as "manager" | "staff",
     });
+    setModal("edit");
   }
+
   function openResetPw(s: StaffMember) {
-    setMode("reset_password");
-    setTarget(s);
-    setPwForm({ password: "", confirm: "" });
+    setSelected(s);
+    setPw({ password: "", confirm: "" });
+    setModal("reset_pw");
   }
 
-  async function handleCreate() {
-    if (!form.name || !form.email || !form.password) return;
-    await createStaff.mutateAsync(form);
+  function handleCreate() {
+    if (!form.name.trim() || !form.email.trim() || !form.password) return;
+    setApiErr("");
+    createMutation.mutate();
   }
 
-  async function handleEdit() {
-    if (!target) return;
-    const update: Record<string, unknown> = {
+  function handleEdit() {
+    if (!form.name.trim() || !form.email.trim()) return;
+    setApiErr("");
+    updateMutation.mutate({
       name: form.name,
       email: form.email,
       role: form.role,
-    };
-    await updateStaff.mutateAsync({ id: target.id, ...update });
+    });
   }
 
-  async function handleResetPw() {
-    if (!target) return;
-    if (pwForm.password.length < 6) {
-      setPwError("Password must be at least 6 characters");
+  function handleResetPw() {
+    if (pw.password.length < 6) {
+      setPwErr("Must be at least 6 characters");
       return;
     }
-    if (pwForm.password !== pwForm.confirm) {
-      setPwError("Passwords do not match");
+    if (pw.password !== pw.confirm) {
+      setPwErr("Passwords do not match");
       return;
     }
-    await updateStaff.mutateAsync({
-      id: target.id,
-      password: pwForm.password,
-    } as any);
-    showToast("Password updated");
-    closeModal();
+    setPwErr("");
+    updateMutation.mutate({ password: pw.password });
   }
 
-  const admins = staff.filter((s) => s.role === "admin");
-  const managers = staff.filter((s) => s.role === "manager");
-  const staffers = staff.filter((s) => s.role === "staff");
+  // ── Derived data ──────────────────────────────────────────────────────────
+  const filtered = search.trim()
+    ? staff.filter(
+        (s) =>
+          s.name.toLowerCase().includes(search.toLowerCase()) ||
+          s.email.toLowerCase().includes(search.toLowerCase()),
+      )
+    : staff;
 
+  const grouped: Record<"admin" | "manager" | "staff", StaffMember[]> = {
+    admin: filtered.filter((s) => s.role === "admin"),
+    manager: filtered.filter((s) => s.role === "manager"),
+    staff: filtered.filter((s) => s.role === "staff"),
+  };
+
+  const activeCount = staff.filter((s) => s.isActive).length;
+
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="p-4 md:p-6 max-w-3xl mx-auto">
-      {/* Toast */}
+    <div className="min-h-screen bg-gray-50">
+      {/* Toast notification */}
       {toast && (
-        <div className="fixed top-4 right-4 z-60 bg-gray-900 text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-lg animate-in slide-in-from-top-2">
-          {toast}
+        <div
+          className={`fixed top-4 right-4 z-70 flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-lg text-sm font-medium transition-all
+          ${toast.ok ? "bg-gray-900 text-white" : "bg-red-600 text-white"}`}
+        >
+          {toast.ok ? "✓" : "✗"} {toast.msg}
         </div>
       )}
 
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Users2 size={22} className="text-blue-600" /> Staff Management
-          </h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            {staff.filter((s) => s.isActive).length} active · {staff.length}{" "}
-            total
-          </p>
+      {/* ── Header ────────────────────────────────────────────────────────── */}
+      <div className="bg-white border-b px-4 md:px-6 py-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">Staff</h1>
+              <p className="text-sm text-gray-400 mt-0.5">
+                {activeCount} active · {staff.length} total members
+              </p>
+            </div>
+            <button
+              onClick={openCreate}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-sm active:scale-95 transition-all shrink-0"
+            >
+              <Plus size={16} /> Add Member
+            </button>
+          </div>
+
+          {/* Search */}
+          <div className="relative mt-4">
+            <Search
+              size={15}
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
+            />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name or email…"
+              className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm
+                         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
         </div>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-1.5 bg-blue-600 text-white px-3 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 active:scale-95"
-        >
-          <Plus size={16} /> Add Member
-        </button>
       </div>
 
-      {isLoading ? (
-        <div className="space-y-2">
-          {[...Array(4)].map((_, i) => (
-            <div
-              key={i}
-              className="h-16 bg-gray-200 rounded-xl animate-pulse"
-            />
-          ))}
+      {/* ── Stats bar ─────────────────────────────────────────────────────── */}
+      <div className="border-b bg-white">
+        <div className="max-w-4xl mx-auto px-4 md:px-6 py-3 flex gap-6">
+          {(["admin", "manager", "staff"] as const).map((role) => {
+            const meta = ROLE_META[role];
+            const count = staff.filter((s) => s.role === role).length;
+            return (
+              <div key={role} className="flex items-center gap-2">
+                <meta.Icon size={14} className="text-gray-400" />
+                <span className="text-sm text-gray-500">{meta.label}s:</span>
+                <span className="text-sm font-semibold text-gray-800">
+                  {count}
+                </span>
+              </div>
+            );
+          })}
         </div>
-      ) : (
-        <div className="space-y-5">
-          {[
-            { label: "Administrators", members: admins },
-            { label: "Managers", members: managers },
-            { label: "Staff", members: staffers },
-          ].map(({ label, members }) =>
-            members.length === 0 ? null : (
-              <div key={label}>
-                <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
-                  {label}
-                </h2>
-                <div className="bg-white rounded-xl border divide-y">
+      </div>
+
+      {/* ── Staff lists ────────────────────────────────────────────────────── */}
+      <div className="max-w-4xl mx-auto px-4 md:px-6 py-6 space-y-6">
+        {isLoading ? (
+          <div className="space-y-3">
+            {[...Array(4)].map((_, i) => (
+              <div
+                key={i}
+                className="bg-white rounded-2xl h-20 animate-pulse border"
+              />
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-20">
+            <Users size={40} className="mx-auto text-gray-300 mb-3" />
+            <p className="text-gray-400 font-medium">
+              {search ? "No results found" : "No staff members yet"}
+            </p>
+          </div>
+        ) : (
+          (["admin", "manager", "staff"] as const).map((role) => {
+            const members = grouped[role];
+            if (!members.length) return null;
+            const meta = ROLE_META[role];
+            return (
+              <section key={role}>
+                <div className="flex items-center gap-2 mb-3">
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ring-1 ${meta.badge}`}
+                  >
+                    <meta.Icon size={11} /> {meta.label}s
+                  </span>
+                  <span className="text-xs text-gray-400">
+                    {members.length} member{members.length !== 1 ? "s" : ""}
+                  </span>
+                </div>
+
+                <div className="bg-white rounded-2xl border overflow-hidden divide-y divide-gray-50">
                   {members.map((member) => {
-                    const meta = ROLE_META[member.role];
                     const isSelf = member.id === currentUserId;
                     const isAdmin = member.role === "admin";
+                    const inactive = !member.isActive;
                     return (
                       <div
                         key={member.id}
-                        className={`flex items-center gap-3 p-4 ${!member.isActive ? "opacity-50" : ""}`}
+                        className={`flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-gray-50/60 ${inactive ? "opacity-60" : ""}`}
                       >
-                        {/* Avatar */}
-                        <div
-                          className={`w-9 h-9 rounded-full border-2 ${meta.border} flex items-center justify-center shrink-0`}
-                        >
-                          <meta.icon
-                            size={16}
-                            className={meta.color.split(" ")[1]}
-                          />
-                        </div>
+                        <Avatar name={member.name} role={member.role} />
 
-                        {/* Info */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-semibold text-gray-900 text-sm">
+                            <span className="font-semibold text-gray-900 text-sm leading-tight">
                               {member.name}
                             </span>
                             {isSelf && (
-                              <span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full font-medium">
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-700 font-semibold">
                                 You
                               </span>
                             )}
-                            {!member.isActive && (
-                              <span className="text-xs bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-medium">
+                            {inactive && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 font-semibold">
                                 Inactive
                               </span>
                             )}
-                            <span
-                              className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${meta.color}`}
-                            >
-                              {meta.label}
-                            </span>
                           </div>
-                          <div className="text-xs text-gray-400 truncate">
+                          <p className="text-xs text-gray-400 truncate mt-0.5">
                             {member.email}
-                          </div>
-                          <div className="text-xs text-gray-300">
-                            Added {formatDateTime(member.createdAt)}
-                          </div>
+                          </p>
+                          <p className="text-[11px] text-gray-300 mt-0.5">
+                            Added {formatDate(member.createdAt)}
+                          </p>
                         </div>
 
-                        {/* Actions — cannot edit admin, cannot self-deactivate */}
-                        {!isAdmin && (
-                          <div className="flex gap-1 shrink-0">
-                            <button
+                        {/* Permission indicator */}
+                        <div className="hidden sm:block text-xs text-gray-300 text-right mr-2">
+                          <p>{meta.desc}</p>
+                        </div>
+
+                        {/* Actions — protected accounts get a lock icon */}
+                        {isAdmin ? (
+                          <div className="flex items-center gap-1 text-gray-300 px-2">
+                            <ShieldCheck size={14} />
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-0.5">
+                            <ActionBtn
+                              icon={<Pencil size={14} />}
+                              label="Edit"
                               onClick={() => openEdit(member)}
-                              title="Edit"
-                              className="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                            >
-                              <Pencil size={14} />
-                            </button>
-                            <button
+                              hoverClass="hover:text-blue-600 hover:bg-blue-50"
+                            />
+                            <ActionBtn
+                              icon={<Key size={14} />}
+                              label="Reset password"
                               onClick={() => openResetPw(member)}
-                              title="Reset password"
-                              className="p-2 rounded-lg text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition-colors"
-                            >
-                              <Key size={14} />
-                            </button>
+                              hoverClass="hover:text-violet-600 hover:bg-violet-50"
+                            />
                             {!isSelf && (
-                              <button
+                              <ActionBtn
+                                icon={
+                                  member.isActive ? (
+                                    <UserX size={14} />
+                                  ) : (
+                                    <UserCheck size={14} />
+                                  )
+                                }
+                                label={
+                                  member.isActive ? "Deactivate" : "Activate"
+                                }
                                 onClick={() =>
-                                  toggleActive.mutate({
+                                  toggleMutation.mutate({
                                     id: member.id,
                                     isActive: member.isActive ? 0 : 1,
                                   })
                                 }
-                                title={
-                                  member.isActive ? "Deactivate" : "Activate"
-                                }
-                                className={`p-2 rounded-lg transition-colors ${
+                                hoverClass={
                                   member.isActive
-                                    ? "text-gray-400 hover:text-red-500 hover:bg-red-50"
-                                    : "text-gray-400 hover:text-green-600 hover:bg-green-50"
-                                }`}
-                              >
-                                {member.isActive ? (
-                                  <UserX size={14} />
-                                ) : (
-                                  <UserCheck size={14} />
-                                )}
-                              </button>
+                                    ? "hover:text-red-500 hover:bg-red-50"
+                                    : "hover:text-green-600 hover:bg-green-50"
+                                }
+                              />
                             )}
+                            <button
+                              onClick={() => openEdit(member)}
+                              className="sm:hidden p-2 rounded-lg text-gray-300"
+                            >
+                              <ChevronRight size={15} />
+                            </button>
                           </div>
                         )}
                       </div>
                     );
                   })}
                 </div>
-              </div>
-            ),
-          )}
-        </div>
-      )}
+              </section>
+            );
+          })
+        )}
+      </div>
 
-      {/* ── Create / Edit modal ── */}
-      {(mode === "create" || mode === "edit") && (
-        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold">
-                {mode === "create" ? "Add Staff Member" : "Edit Member"}
-              </h2>
-              <button
-                onClick={closeModal}
-                className="p-1 rounded-full hover:bg-gray-100 text-gray-400"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <div className="space-y-3 mb-5">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Full Name
-                </label>
-                <input
-                  autoFocus
-                  type="text"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="Jane Doe"
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  placeholder="jane@restaurant.com"
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              {mode === "create" && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Password
-                  </label>
-                  <input
-                    type="password"
-                    value={form.password}
-                    onChange={(e) =>
-                      setForm({ ...form, password: e.target.value })
-                    }
-                    placeholder="Min 6 characters"
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              )}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Role
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {(["manager", "staff"] as const).map((r) => {
-                    const m = ROLE_META[r];
-                    return (
-                      <button
-                        key={r}
-                        onClick={() => setForm({ ...form, role: r })}
-                        className={`flex items-center gap-2 p-3 rounded-xl border-2 text-left transition-colors ${
-                          form.role === r
-                            ? "border-blue-600 bg-blue-50"
-                            : "border-gray-200 hover:border-gray-300"
+      {/* ── Create / Edit modal ────────────────────────────────────────────── */}
+      {(modal === "create" || modal === "edit") && (
+        <Modal
+          title={
+            modal === "create"
+              ? "Add Staff Member"
+              : `Edit ${selected?.name ?? ""}`
+          }
+          onClose={closeModal}
+        >
+          <div className="space-y-4">
+            <InputField
+              label="Full Name"
+              value={form.name}
+              onChange={(v) => setForm((f) => ({ ...f, name: v }))}
+              placeholder="Jane Doe"
+              autoFocus
+            />
+            <InputField
+              label="Email"
+              type="email"
+              value={form.email}
+              onChange={(v) => setForm((f) => ({ ...f, email: v }))}
+              placeholder="jane@restaurant.com"
+            />
+            {modal === "create" && (
+              <InputField
+                label="Password"
+                type="password"
+                value={form.password}
+                onChange={(v) => setForm((f) => ({ ...f, password: v }))}
+                placeholder="Min 6 characters"
+              />
+            )}
+
+            {/* Role selector */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                Role
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {(["manager", "staff"] as const).map((r) => {
+                  const meta = ROLE_META[r];
+                  const active = form.role === r;
+                  return (
+                    <button
+                      key={r}
+                      onClick={() => setForm((f) => ({ ...f, role: r }))}
+                      className={`flex items-center gap-3 p-3.5 rounded-xl border-2 text-left transition-all
+                        ${
+                          active
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-gray-100 hover:border-gray-200 bg-gray-50"
                         }`}
-                      >
-                        <m.icon size={16} className={m.color.split(" ")[1]} />
-                        <div>
-                          <div className="text-sm font-medium">{m.label}</div>
-                          <div className="text-xs text-gray-400">
-                            {r === "manager"
-                              ? "Tables + Reports"
-                              : "Orders only"}
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
+                    >
+                      <meta.Icon
+                        size={18}
+                        className={active ? "text-blue-600" : "text-gray-400"}
+                      />
+                      <div>
+                        <p
+                          className={`text-sm font-semibold leading-tight ${active ? "text-blue-700" : "text-gray-700"}`}
+                        >
+                          {meta.label}
+                        </p>
+                        <p className="text-[11px] text-gray-400 mt-0.5">
+                          {meta.desc}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
-            {createStaff.error && (
-              <p className="text-red-500 text-xs mb-3">
-                {(createStaff.error as Error).message}
+
+            {apiErr && (
+              <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
+                {apiErr}
               </p>
             )}
-            <div className="flex gap-3">
+
+            <div className="flex gap-3 pt-1">
               <button
                 onClick={closeModal}
-                className="flex-1 py-2.5 border rounded-xl text-gray-700 font-medium text-sm"
+                className="flex-1 py-2.5 border border-gray-200 rounded-xl text-gray-700 font-medium text-sm hover:bg-gray-50"
               >
                 Cancel
               </button>
               <button
-                onClick={mode === "create" ? handleCreate : handleEdit}
+                onClick={modal === "create" ? handleCreate : handleEdit}
                 disabled={
-                  !form.name ||
-                  !form.email ||
-                  (mode === "create" && !form.password) ||
-                  createStaff.isPending ||
-                  updateStaff.isPending
+                  !form.name.trim() ||
+                  !form.email.trim() ||
+                  (modal === "create" && !form.password) ||
+                  createMutation.isPending ||
+                  updateMutation.isPending
                 }
-                className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl font-semibold text-sm disabled:opacity-50"
+                className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                {mode === "create" ? "Create" : "Save"}
+                {createMutation.isPending || updateMutation.isPending
+                  ? "Saving…"
+                  : modal === "create"
+                    ? "Create Member"
+                    : "Save Changes"}
               </button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
 
-      {/* ── Reset password modal ── */}
-      {mode === "reset_password" && target && (
-        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold">Reset Password</h2>
-              <button
-                onClick={closeModal}
-                className="p-1 rounded-full hover:bg-gray-100 text-gray-400"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <p className="text-sm text-gray-500 mb-4">
-              Setting new password for{" "}
-              <span className="font-semibold text-gray-800">{target.name}</span>
-            </p>
-            <div className="space-y-3 mb-5">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  New Password
-                </label>
-                <input
-                  autoFocus
-                  type="password"
-                  value={pwForm.password}
-                  onChange={(e) =>
-                    setPwForm({ ...pwForm, password: e.target.value })
-                  }
-                  placeholder="Min 6 characters"
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Confirm Password
-                </label>
-                <input
-                  type="password"
-                  value={pwForm.confirm}
-                  onChange={(e) =>
-                    setPwForm({ ...pwForm, confirm: e.target.value })
-                  }
-                  placeholder="Repeat password"
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              {pwError && <p className="text-red-500 text-xs">{pwError}</p>}
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={closeModal}
-                className="flex-1 py-2.5 border rounded-xl text-gray-700 font-medium text-sm"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleResetPw}
-                disabled={updateStaff.isPending}
-                className="flex-1 py-2.5 bg-purple-600 text-white rounded-xl font-semibold text-sm disabled:opacity-50"
-              >
-                Reset Password
-              </button>
+      {/* ── Reset password modal ────────────────────────────────────────────── */}
+      {modal === "reset_pw" && selected && (
+        <Modal title="Reset Password" onClose={closeModal}>
+          <div className="flex items-center gap-3 mb-5 pb-4 border-b">
+            <Avatar name={selected.name} role={selected.role} size="sm" />
+            <div>
+              <p className="font-semibold text-gray-900 text-sm">
+                {selected.name}
+              </p>
+              <p className="text-xs text-gray-400">{selected.email}</p>
             </div>
           </div>
-        </div>
+
+          <div className="space-y-4">
+            <InputField
+              label="New Password"
+              type="password"
+              value={pw.password}
+              onChange={(v) => setPw((p) => ({ ...p, password: v }))}
+              placeholder="Min 6 characters"
+              autoFocus
+            />
+            <InputField
+              label="Confirm Password"
+              type="password"
+              value={pw.confirm}
+              onChange={(v) => setPw((p) => ({ ...p, confirm: v }))}
+              placeholder="Repeat password"
+            />
+            {pwErr && <p className="text-sm text-red-600">{pwErr}</p>}
+          </div>
+
+          <div className="flex gap-3 mt-5">
+            <button
+              onClick={closeModal}
+              className="flex-1 py-2.5 border border-gray-200 rounded-xl text-gray-700 font-medium text-sm hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleResetPw}
+              disabled={!pw.password || !pw.confirm || updateMutation.isPending}
+              className="flex-1 py-2.5 bg-violet-600 text-white rounded-xl font-semibold text-sm hover:bg-violet-700 disabled:opacity-40 transition-colors"
+            >
+              {updateMutation.isPending ? "Saving…" : "Reset Password"}
+            </button>
+          </div>
+        </Modal>
       )}
+    </div>
+  );
+}
+
+// ─── Reusable action button ────────────────────────────────────────────────────
+
+function ActionBtn({
+  icon,
+  label,
+  onClick,
+  hoverClass,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  hoverClass: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={label}
+      className={`p-2 rounded-xl text-gray-300 transition-colors hidden sm:flex items-center justify-center ${hoverClass}`}
+    >
+      {icon}
+    </button>
+  );
+}
+
+// ─── Modal wrapper ────────────────────────────────────────────────────────────
+
+function Modal({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-end sm:items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Modal header */}
+        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b">
+          <h2 className="text-base font-bold text-gray-900">{title}</h2>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Modal body */}
+        <div className="px-6 py-5">{children}</div>
+      </div>
     </div>
   );
 }

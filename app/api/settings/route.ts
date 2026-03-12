@@ -8,7 +8,7 @@ import { z } from "zod";
 export async function GET() {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const restaurantId = (session.user as any).restaurantId;
+  const restaurantId = session.user.restaurantId;
   const [r] = await db.select().from(restaurants).where(eq(restaurants.id, restaurantId));
   return NextResponse.json({ data: r });
 }
@@ -16,8 +16,8 @@ export async function GET() {
 export async function PUT(req: NextRequest) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if ((session.user as any).role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  const restaurantId = (session.user as any).restaurantId;
+  if (session.user.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const restaurantId = session.user.restaurantId;
 
   const parsed = z.object({
     name: z.string().min(1).optional(),

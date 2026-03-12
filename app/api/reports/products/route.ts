@@ -3,17 +3,15 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db/client";
 import { orderItems, orders } from "@/lib/db/schema";
 import { eq, and, gte, lte, sum, desc } from "drizzle-orm";
-import { sql } from "drizzle-orm";
-import type { SessionUser } from "@/types";
+import { can } from "@/lib/rbac";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const user = session.user as unknown as SessionUser;
 
-  if (!["admin", "manager"].includes(user.role)) {
+  if (!can(session.user.role, "reports_view")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -21,7 +19,7 @@ export async function GET(req: NextRequest) {
   const dateFrom = searchParams.get("date_from");
   const dateTo = searchParams.get("date_to");
 
-  const conditions = [eq(orders.restaurantId, user.restaurantId)];
+  const conditions = [eq(orders.restaurantId, session.user.restaurantId)];
   if (dateFrom) conditions.push(gte(orders.openedAt, new Date(dateFrom)));
   if (dateTo) {
     const end = new Date(dateTo);

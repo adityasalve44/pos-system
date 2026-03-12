@@ -11,7 +11,7 @@ export async function GET() {
   const session = await auth();
   if (!session?.user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const restaurantId = (session.user as any).restaurantId;
+  const restaurantId = session.user.restaurantId;
   const data = await db
     .select()
     .from(categories)
@@ -24,10 +24,10 @@ export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const role = (session.user as any).role as Role;
+  const role = session.user.role;
   if (!can(role, "categories_manage"))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  const restaurantId = (session.user as any).restaurantId;
+  const restaurantId = session.user.restaurantId;
 
   const parsed = z
     .object({

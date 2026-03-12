@@ -9,33 +9,35 @@ export default function SettingsPage() {
   const update = useUpdateSettings();
   const [saved, setSaved] = useState(false);
 
-  const [form, setForm] = useState({
-    name: "", address: "", phone: "",
-    gstEnabled: 1, gstType: "GST" as GstType, gstNumber: "", taxRate: "5.00",
-  });
+  const [form, setForm] = useState(() => ({
+    name: settings?.name ?? "",
+    address: settings?.address ?? "",
+    phone: settings?.phone ?? "",
+    gstEnabled: settings?.gstEnabled ?? 1,
+    gstType: settings?.gstType ?? "GST" as GstType,
+    gstNumber: settings?.gstNumber ?? "",
+    taxRate: settings?.taxRate ?? "5.00",
+  }));
 
   useEffect(() => {
-    if (settings) setForm({
-      name: settings.name ?? "",
-      address: settings.address ?? "",
-      phone: settings.phone ?? "",
-      gstEnabled: settings.gstEnabled ?? 1,
-      gstType: settings.gstType ?? "GST",
-      gstNumber: settings.gstNumber ?? "",
-      taxRate: settings.taxRate ?? "5.00",
-    });
-  }, [settings]);
+    if (saved) {
+      const timer = setTimeout(() => setSaved(false), 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [saved]);
 
   async function handleSave() {
-    await update.mutateAsync({
-      name: form.name, address: form.address, phone: form.phone,
+    const payload = {
+      name: form.name,
+      address: form.address,
+      phone: form.phone,
       gstEnabled: form.gstEnabled,
       gstType: form.gstType,
       gstNumber: form.gstNumber,
       taxRate: form.taxRate,
-    } as any);
+    };
+    await update.mutateAsync(payload);
     setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
   }
 
   if (isLoading) return (

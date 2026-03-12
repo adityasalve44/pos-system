@@ -13,8 +13,8 @@ export async function POST(
   const session = await auth();
   if (!session?.user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const role = (session.user as any).role as Role;
-  const restaurantId = (session.user as any).restaurantId;
+  const role = session.user.role;
+  const restaurantId = session.user.restaurantId;
   const { id } = await params;
 
   if (!can(role, "orders_cancel"))

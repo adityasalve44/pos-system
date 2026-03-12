@@ -16,9 +16,9 @@ const updateSchema = z.object({
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const role = (session.user as any).role;
+  const role = session.user.role;
   if (role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  const restaurantId = (session.user as any).restaurantId;
+  const restaurantId = session.user.restaurantId;
   const { id } = await params;
 
   const body = await req.json();
@@ -37,9 +37,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const role = (session.user as any).role;
+  const role = session.user.role;
   if (role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  const restaurantId = (session.user as any).restaurantId;
+  const restaurantId = session.user.restaurantId;
   const { id } = await params;
 
   await db

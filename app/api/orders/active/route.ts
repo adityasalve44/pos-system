@@ -7,7 +7,7 @@ import { eq, and, inArray } from "drizzle-orm";
 export async function GET() {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const restaurantId = (session.user as any).restaurantId;
+  const restaurantId = session.user.restaurantId;
 
   const activeOrders = await db
     .select()

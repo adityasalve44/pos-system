@@ -14,10 +14,10 @@ export async function PUT(
   const session = await auth();
   if (!session?.user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const role = (session.user as any).role as Role;
+  const role = session.user.role;
   if (!can(role, "tables_edit"))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  const restaurantId = (session.user as any).restaurantId;
+  const restaurantId = session.user.restaurantId;
   const { id } = await params;
 
   const parsed = z
@@ -45,13 +45,13 @@ export async function DELETE(
   const session = await auth();
   if (!session?.user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const role = (session.user as any).role as Role;
+  const role = session.user.role;
   if (!can(role, "tables_delete"))
     return NextResponse.json(
       { error: "Forbidden: only admin can delete tables" },
       { status: 403 },
     );
-  const restaurantId = (session.user as any).restaurantId;
+  const restaurantId = session.user.restaurantId;
   const { id } = await params;
 
   await db

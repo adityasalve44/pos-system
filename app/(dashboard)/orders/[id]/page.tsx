@@ -11,13 +11,12 @@ import { formatCurrency } from "@/lib/utils/format";
 import { can } from "@/lib/rbac";
 import { ArrowLeft, X, Printer } from "lucide-react";
 import type { Product } from "@/types";
-import type { Role } from "@/lib/rbac";
 
 export default function OrderPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { data: session } = useSession();
-  const role = (session?.user as any)?.role as Role;
+  const role = session?.user?.role;
 
   const { data: order, isLoading } = useOrder(id);
   const addItem = useAddItem();

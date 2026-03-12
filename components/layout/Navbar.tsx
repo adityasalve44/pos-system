@@ -15,9 +15,10 @@ import {
   X,
   Users2,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { can } from "@/lib/rbac";
 import type { Role } from "@/lib/rbac";
+import { User } from "@/types";
 
 type NavItem = {
   href: string;
@@ -59,15 +60,14 @@ const ROLE_BADGE: Record<string, { label: string; color: string }> = {
 export function Navbar() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const role = (session?.user as any)?.role as Role | undefined;
+  const role = (session?.user as User)?.role as Role | undefined;
 
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-
-  useEffect(() => {
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window === "undefined") return false;
     const saved = localStorage.getItem("pos-sidebar-collapsed");
-    if (saved !== null) setCollapsed(saved === "true");
-  }, []);
+    return saved !== null ? saved === "true" : false;
+  });
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   function toggleCollapse() {
     const next = !collapsed;

@@ -1,259 +1,166 @@
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/lib/db/client";
 import { users } from "@/lib/db/schema";
-import { can } from "@/lib/rbac";
-import type { Role } from "@/lib/rbac";
 import { eq, and } from "drizzle-orm";
+import { z } from "zod";
 import bcrypt from "bcryptjs";
+import { can } from "@/lib/rbac";
 
-export async function PUT(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const session = await auth();
+type RouteParams = { params: Promise<{ id: string }> };
 
-    // ── Auth & Authorization ──────────────────────────────────────────────
-    if (!session?.user?.id) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    
-    const role = (session.user as any).role as Role;
-    if (!can(role, "staff_manage")) {
-      return Response.json({ error: "Forbidden" }, { status: 403 });
-    }
+const PUBLIC_COLS = {
+  id: users.id,
+  name: users.name,
+  email: users.email,
+  role: users.role,
+  isActive: users.isActive,
+  createdAt: users.createdAt,
+} as const;
 
-    const restaurantId = (session.user as any).restaurantId;
-    const staffId = params.id;
-    const body = await req.json();
+const updateSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  email: z.string().email().optional(),
+  /** Only non-admin roles can be assigned via this endpoint */
+  role: z.enum(["manager", "staff"]).optional(),
+  isActive: z.number().min(0).max(1).optional(),
+  password: z.string().min(6).max(72).optional(),
+});
 
-    // ── Verify staff member exists and belongs to this restaurant ──────────
-    const [staff] = await db
-      .select()
-      .from(users)
-      .where(
-        and(
-          eq(users.id, staffId),
-          eq(users.restaurantId, restaurantId)
-        )
-      )
-      .limit(1);
+async function resolveTarget(
+  targetId: string,
+  restaurantId: string,
+): Promise<{ id: string; role: string; restaurantId: string } | null> {
+  const [target] = await db
+    .select({
+      id: users.id,
+      role: users.role,
+      restaurantId: users.restaurantId,
+    })
+    .from(users)
+    .where(eq(users.id, targetId))
+    .limit(1);
 
-    if (!staff) {
-      return Response.json(
-        { error: "Staff member not found" },
-        { status: 404 }
-      );
-    }
-
-    // ── Prepare update data ───────────────────────────────────────────────
-    const updateData: Record<string, any> = {};
-
-    // Update name if provided
-    if (body.name !== undefined) {
-      if (!body.name.trim()) {
-        return Response.json(
-          { error: "Name cannot be empty" },
-          { status: 400 }
-        );
-      }
-      updateData.name = body.name;
-    }
-
-    // Update email if provided (check for duplicates)
-    if (body.email !== undefined) {
-      if (!body.email.trim()) {
-        return Response.json(
-          { error: "Email cannot be empty" },
-          { status: 400 }
-        );
-      }
-
-      // Check if new email is already in use (excluding current user)
-      if (body.email !== staff.email) {
-        const duplicate = await db
-          .select({ id: users.id })
-          .from(users)
-          .where(eq(users.email, body.email))
-          .limit(1);
-
-        if (duplicate.length > 0) {
-          return Response.json(
-            { error: "Email already in use" },
-            { status: 409 }
-          );
-        }
-      }
-
-      updateData.email = body.email;
-    }
-
-    // Update role if provided
-    if (body.role !== undefined) {
-      if (!["admin", "manager", "staff"].includes(body.role)) {
-        return Response.json(
-          { error: "Invalid role. Must be admin, manager, or staff" },
-          { status: 400 }
-        );
-      }
-      updateData.role = body.role;
-    }
-
-    // Update password if provided (hash it)
-    if (body.password !== undefined) {
-      if (body.password.length < 6) {
-        return Response.json(
-          { error: "Password must be at least 6 characters" },
-          { status: 400 }
-        );
-      }
-      updateData.passwordHash = await bcrypt.hash(body.password, 10);
-    }
-
-    // Update isActive status if provided (soft delete logic)
-    if (body.isActive !== undefined) {
-      if (typeof body.isActive !== "number" || ![0, 1].includes(body.isActive)) {
-        return Response.json(
-          { error: "isActive must be 0 or 1" },
-          { status: 400 }
-        );
-      }
-      updateData.isActive = body.isActive;
-    }
-
-    // ── Prevent deactivating the only admin ──────────────────────────────
-    if (body.isActive === 0 && staff.role === "admin") {
-      const adminCount = await db
-        .select({ id: users.id })
-        .from(users)
-        .where(
-          and(
-            eq(users.restaurantId, restaurantId),
-            eq(users.role, "admin"),
-            eq(users.isActive, 1)
-          )
-        );
-
-      if (adminCount.length === 1) {
-        return Response.json(
-          { error: "Cannot deactivate the only admin account" },
-          { status: 409 }
-        );
-      }
-    }
-
-    // ── Update the staff member ───────────────────────────────────────────
-    if (Object.keys(updateData).length === 0) {
-      return Response.json(
-        { error: "No update fields provided" },
-        { status: 400 }
-      );
-    }
-
-    await db
-      .update(users)
-      .set(updateData)
-      .where(eq(users.id, staffId));
-
-    // ── Fetch and return updated user ─────────────────────────────────────
-    const [updatedUser] = await db
-      .select({
-        id: users.id,
-        name: users.name,
-        email: users.email,
-        role: users.role,
-        isActive: users.isActive,
-        createdAt: users.createdAt,
-      })
-      .from(users)
-      .where(eq(users.id, staffId))
-      .limit(1);
-
-    return Response.json({ data: updatedUser });
-  } catch (err) {
-    console.error("[PUT /api/staff/:id]", err);
-    return Response.json(
-      { error: "Failed to update staff member" },
-      { status: 500 }
-    );
-  }
+  if (!target || target.restaurantId !== restaurantId) return null;
+  return target;
 }
 
-export async function DELETE(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const session = await auth();
+/** PUT /api/staff/:id — update name, email, role, isActive, or password */
+export async function PUT(
+  req: NextRequest,
+  { params }: RouteParams,
+): Promise<NextResponse> {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-    // ── Auth & Authorization ──────────────────────────────────────────────
-    if (!session?.user?.id) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    
-    const role = (session.user as any).role as Role;
-    if (!can(role, "staff_manage")) {
-      return Response.json({ error: "Forbidden" }, { status: 403 });
-    }
+  if (!can(session.user.role, "staff_manage")) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
-    const restaurantId = (session.user as any).restaurantId;
-    const staffId = params.id;
+  const { id } = await params;
+  const { restaurantId } = session.user;
 
-    // ── Verify staff member exists and belongs to this restaurant ──────────
-    const [staff] = await db
-      .select()
-      .from(users)
-      .where(
-        and(
-          eq(users.id, staffId),
-          eq(users.restaurantId, restaurantId)
-        )
-      )
-      .limit(1);
-
-    if (!staff) {
-      return Response.json(
-        { error: "Staff member not found" },
-        { status: 404 }
-      );
-    }
-
-    // ── Prevent deleting the only admin ──────────────────────────────────
-    if (staff.role === "admin") {
-      const adminCount = await db
-        .select({ id: users.id })
-        .from(users)
-        .where(
-          and(
-            eq(users.restaurantId, restaurantId),
-            eq(users.role, "admin"),
-            eq(users.isActive, 1)
-          )
-        );
-
-      if (adminCount.length === 1) {
-        return Response.json(
-          { error: "Cannot delete the only admin account" },
-          { status: 409 }
-        );
-      }
-    }
-
-    // ── Soft delete: set isActive = 0 ───────────────────────────────────
-    await db
-      .update(users)
-      .set({ isActive: 0 })
-      .where(eq(users.id, staffId));
-
-    return Response.json(
-      { message: "Staff member deleted successfully" },
-      { status: 200 }
-    );
-  } catch (err) {
-    console.error("[DELETE /api/staff/:id]", err);
-    return Response.json(
-      { error: "Failed to delete staff member" },
-      { status: 500 }
+  const target = await resolveTarget(id, restaurantId);
+  if (!target) {
+    return NextResponse.json(
+      { error: "Staff member not found" },
+      { status: 404 },
     );
   }
+
+  // Admin accounts are protected — no edits through this endpoint
+  if (target.role === "admin") {
+    return NextResponse.json(
+      { error: "Admin accounts cannot be edited through this endpoint" },
+      { status: 403 },
+    );
+  }
+
+  const body: unknown = await req.json();
+  const parsed = updateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0].message },
+      { status: 400 },
+    );
+  }
+
+  const update: Record<string, string | number> = {};
+
+  if (parsed.data.name !== undefined) update.name = parsed.data.name;
+  if (parsed.data.email !== undefined) update.email = parsed.data.email;
+  if (parsed.data.role !== undefined) update.role = parsed.data.role;
+  if (parsed.data.isActive !== undefined)
+    update.isActive = parsed.data.isActive;
+  if (parsed.data.password !== undefined) {
+    update.passwordHash = await bcrypt.hash(parsed.data.password, 12);
+  }
+
+  if (Object.keys(update).length === 0) {
+    return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
+  }
+
+  await db
+    .update(users)
+    .set(update)
+    .where(and(eq(users.id, id), eq(users.restaurantId, restaurantId)));
+
+  const [updated] = await db
+    .select(PUBLIC_COLS)
+    .from(users)
+    .where(eq(users.id, id));
+
+  return NextResponse.json({ data: updated });
+}
+
+/**
+ * DELETE /api/staff/:id — soft-deactivate (preserves order history).
+ * Cannot deactivate your own account or an admin account.
+ */
+export async function DELETE(
+  req: NextRequest,
+  { params }: RouteParams,
+): Promise<NextResponse> {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!can(session.user.role, "staff_manage")) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const { id } = await params;
+  const { restaurantId, id: callerId } = session.user;
+
+  if (id === callerId) {
+    return NextResponse.json(
+      { error: "You cannot deactivate your own account" },
+      { status: 400 },
+    );
+  }
+
+  const target = await resolveTarget(id, restaurantId);
+  if (!target) {
+    return NextResponse.json(
+      { error: "Staff member not found" },
+      { status: 404 },
+    );
+  }
+
+  if (target.role === "admin") {
+    return NextResponse.json(
+      { error: "Admin accounts cannot be deactivated" },
+      { status: 403 },
+    );
+  }
+
+  await db
+    .update(users)
+    .set({ isActive: 0 })
+    .where(and(eq(users.id, id), eq(users.restaurantId, restaurantId)));
+
+  return NextResponse.json({ data: { success: true } });
 }

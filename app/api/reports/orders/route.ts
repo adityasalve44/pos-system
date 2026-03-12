@@ -7,7 +7,7 @@ import { eq, and, between, inArray, desc } from "drizzle-orm";
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const restaurantId = (session.user as any).restaurantId;
+  const restaurantId = session.user.restaurantId;
 
   const { searchParams } = new URL(req.url);
   const dateFrom = searchParams.get("date_from");
@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   const offset = (page - 1) * limit;
 
   const conditions = [eq(orders.restaurantId, restaurantId)];
-  if (status) conditions.push(inArray(orders.status, [status as any]));
+  if (status) conditions.push(inArray(orders.status, [status as string]));
   if (dateFrom && dateTo) {
     conditions.push(between(orders.openedAt, new Date(dateFrom), new Date(dateTo + "T23:59:59")));
   }

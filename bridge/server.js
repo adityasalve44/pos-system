@@ -8,8 +8,8 @@
  *   npm install express node-thermal-printer
  *   PRINTER_IP=192.168.1.xxx node bridge/server.js
  */
-const express = require("express");
-const { ThermalPrinter, PrinterTypes, CharacterSet } = require("node-thermal-printer");
+import express from "express";
+import { ThermalPrinter, PrinterTypes, CharacterSet } from "node-thermal-printer";
 
 const app = express();
 app.use(express.json());

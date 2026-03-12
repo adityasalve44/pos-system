@@ -20,12 +20,11 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import type { Table } from "@/types";
-import type { Role } from "@/lib/rbac";
 
 export default function TablesPage() {
   const router = useRouter();
   const { data: session } = useSession();
-  const role = (session?.user as any)?.role as Role;
+  const role = session?.user?.role;
 
   const isAdmin = can(role, "tables_delete"); // admin only
   const canManage = can(role, "tables_create"); // admin + manager
@@ -126,7 +125,7 @@ export default function TablesPage() {
           />
           <div className="flex-1">
             <p className="font-semibold text-orange-800 text-sm">
-              "{conflict.tableName}" was just opened by another user
+              &quot;{conflict.tableName}&quot; was just opened by another user
             </p>
             <p className="text-orange-700 text-xs mt-0.5">
               Order #{conflict.orderNumber} is already active on this table.
@@ -281,7 +280,7 @@ export default function TablesPage() {
           <div className="text-5xl mb-3">🪑</div>
           <p className="font-medium">No tables yet</p>
           {canManage && (
-            <p className="text-sm mt-1">Click "Add Table" to get started</p>
+            <p className="text-sm mt-1">Click &quot;Add Table&quot; to get started</p>
           )}
         </div>
       )}
@@ -356,7 +355,7 @@ export default function TablesPage() {
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center">
             <div className="text-3xl mb-3">🗑️</div>
             <h3 className="font-bold text-gray-900 mb-2">
-              Remove "{deleteTarget.name}"?
+              Remove &quot;{deleteTarget.name}&quot;?
             </h3>
             <p className="text-sm text-gray-500 mb-5">
               Table will be hidden but order history is preserved.
