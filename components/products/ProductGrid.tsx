@@ -3,7 +3,7 @@ import { useState, useMemo } from "react";
 import { useProducts } from "@/lib/hooks/useProducts";
 import type { Product } from "@/types";
 import { formatCurrency } from "@/lib/utils/format";
-import { Plus } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 interface Props {
   onAddItem: (product: Product) => void;
@@ -13,6 +13,8 @@ interface Props {
 export function ProductGrid({ onAddItem, loading }: Props) {
   const { data: products, isLoading } = useProducts();
   const [activeCategory, setActiveCategory] = useState("All");
+  // Track which product is being added for per-item spinner
+  const [addingId, setAddingId] = useState<string | null>(null);
 
   const categories = useMemo(() => {
     const cats = new Set(products?.map((p) => p.category) ?? []);
@@ -20,12 +22,36 @@ export function ProductGrid({ onAddItem, loading }: Props) {
   }, [products]);
 
   const filtered = useMemo(() => {
-    return products?.filter(
-      (p) => p.isAvailable && (activeCategory === "All" || p.category === activeCategory)
-    ) ?? [];
+    return (
+      products?.filter(
+        (p) =>
+          p.isAvailable &&
+          (activeCategory === "All" || p.category === activeCategory),
+      ) ?? []
+    );
   }, [products, activeCategory]);
 
-  if (isLoading) return <div className="animate-pulse space-y-3"><div className="h-8 bg-gray-200 rounded"/><div className="grid grid-cols-3 gap-3">{[...Array(9)].map((_, i) => <div key={i} className="h-20 bg-gray-200 rounded-xl"/>)}</div></div>;
+  async function handleAdd(product: Product) {
+    if (loading || addingId) return;
+    setAddingId(product.id);
+    try {
+      await onAddItem(product);
+    } finally {
+      setAddingId(null);
+    }
+  }
+
+  if (isLoading)
+    return (
+      <div className="animate-pulse space-y-3">
+        <div className="h-8 bg-gray-200 rounded" />
+        <div className="grid grid-cols-3 gap-3">
+          {[...Array(9)].map((_, i) => (
+            <div key={i} className="h-20 bg-gray-200 rounded-xl" />
+          ))}
+        </div>
+      </div>
+    );
 
   return (
     <div>
@@ -48,23 +74,41 @@ export function ProductGrid({ onAddItem, loading }: Props) {
 
       {/* Product grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {filtered.map((product) => (
-          <button
-            key={product.id}
-            onClick={() => !loading && onAddItem(product)}
-            disabled={loading}
-            className="text-left bg-white border border-gray-200 rounded-xl p-3 hover:border-blue-300 hover:shadow-sm active:scale-95 transition-all disabled:opacity-50"
-          >
-            <div className="font-medium text-gray-900 text-sm leading-tight mb-1">{product.name}</div>
-            <div className="text-xs text-gray-500 mb-2">{product.category}</div>
-            <div className="flex items-center justify-between">
-              <span className="font-semibold text-blue-600 text-sm">{formatCurrency(product.price)}</span>
-              <span className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
-                <Plus size={14} className="text-white" />
-              </span>
-            </div>
-          </button>
-        ))}
+        {filtered.map((product) => {
+          const isAdding = addingId === product.id;
+          return (
+            <button
+              key={product.id}
+              onClick={() => handleAdd(product)}
+              disabled={!!addingId}
+              className={`relative text-left bg-white border border-gray-200 rounded-xl p-3 transition-all
+                hover:border-blue-300 hover:shadow-sm active:scale-95
+                ${addingId && !isAdding ? "opacity-50" : ""}
+                ${isAdding ? "border-blue-400 shadow-sm" : ""}`}
+            >
+              {/* Per-item spinner overlay */}
+              {isAdding && (
+                <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-white/80 backdrop-blur-sm z-10">
+                  <Loader2 size={20} className="animate-spin text-blue-600" />
+                </div>
+              )}
+              <div className="font-medium text-gray-900 text-sm leading-tight mb-1">
+                {product.name}
+              </div>
+              <div className="text-xs text-gray-400 mb-2">
+                {product.category}
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-blue-600 text-sm">
+                  {formatCurrency(product.price)}
+                </span>
+                <span className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold leading-none">
+                  +
+                </span>
+              </div>
+            </button>
+          );
+        })}
       </div>
 
       {filtered.length === 0 && (

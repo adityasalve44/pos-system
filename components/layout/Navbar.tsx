@@ -18,7 +18,6 @@ import {
 import { useState } from "react";
 import { can } from "@/lib/rbac";
 import type { Role } from "@/lib/rbac";
-import { User } from "@/types";
 
 type NavItem = {
   href: string;
@@ -51,21 +50,21 @@ const NAV: NavItem[] = [
   },
 ];
 
-const ROLE_BADGE: Record<string, { label: string; color: string }> = {
-  admin: { label: "Admin", color: "bg-red-100 text-red-700" },
-  manager: { label: "Manager", color: "bg-blue-100 text-blue-700" },
-  staff: { label: "Staff", color: "bg-gray-100 text-gray-600" },
-};
+const ROLE_BADGE: Record<string, { label: string; bg: string; text: string }> =
+  {
+    admin: { label: "Admin", bg: "bg-orange-500/20", text: "text-orange-300" },
+    manager: { label: "Manager", bg: "bg-sky-500/20", text: "text-sky-300" },
+    staff: { label: "Staff", bg: "bg-slate-500/20", text: "text-slate-300" },
+  };
 
 export function Navbar() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const role = (session?.user as User)?.role as Role | undefined;
+  const role = session?.user?.role as Role | undefined;
 
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window === "undefined") return false;
-    const saved = localStorage.getItem("pos-sidebar-collapsed");
-    return saved !== null ? saved === "true" : false;
+    return localStorage.getItem("pos-sidebar-collapsed") === "true";
   });
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -81,7 +80,6 @@ export function Navbar() {
     );
   }
 
-  // Filter nav items by role
   const links = NAV.filter((n) => !n.permission || can(role, n.permission));
 
   const isActive = (href: string) =>
@@ -95,76 +93,142 @@ export function Navbar() {
 
   return (
     <>
-      {/* ── Desktop sidebar ── */}
+      {/* ── Desktop sidebar ─────────────────────────────────────────── */}
       <aside
-        className={`hidden md:flex flex-col min-h-screen bg-gray-900 text-white fixed left-0 top-0 z-40 transition-[width] duration-200 ${collapsed ? "w-16" : "w-56"}`}
+        style={{
+          background: "var(--sidebar-bg)",
+          borderRight: "1px solid var(--sidebar-border)",
+        }}
+        className={`hidden md:flex flex-col min-h-screen fixed left-0 top-0 z-40 transition-[width] duration-200 ${collapsed ? "w-16" : "w-56"}`}
       >
-        {/* Logo */}
+        {/* Logo row */}
         <div
-          className={`flex items-center border-b border-gray-700 h-14 px-3 ${collapsed ? "justify-center" : "gap-2"}`}
+          className={`flex items-center h-14 px-3 shrink-0 ${collapsed ? "justify-center" : "gap-2.5"}`}
+          style={{ borderBottom: "1px solid var(--sidebar-border)" }}
         >
-          <span className="text-xl shrink-0">🍽️</span>
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: "var(--sidebar-active)" }}
+          >
+            <span className="text-sm">🍽️</span>
+          </div>
           {!collapsed && (
-            <span className="font-bold text-sm">RestaurantPOS</span>
+            <span className="font-bold text-sm text-white tracking-tight">
+              RestaurantPOS
+            </span>
           )}
         </div>
 
-        {/* Role badge */}
-        {!collapsed && badge && (
-          <div className="px-4 py-2 border-b border-gray-800">
-            <span
-              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${badge.color}`}
-            >
-              {badge.label}
-            </span>
-            <span className="text-gray-400 text-xs ml-2 truncate">
-              {session?.user?.name}
-            </span>
+        {/* User info */}
+        {!collapsed && (
+          <div
+            className="px-3 py-3 shrink-0"
+            style={{ borderBottom: "1px solid var(--sidebar-border)" }}
+          >
+            <div className="flex items-center gap-2.5">
+              <div
+                className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+                style={{ background: "var(--sidebar-active)" }}
+              >
+                {session?.user?.name?.[0]?.toUpperCase() ?? "?"}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-semibold text-white truncate">
+                  {session?.user?.name}
+                </div>
+                {badge && (
+                  <span
+                    className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${badge.bg} ${badge.text}`}
+                  >
+                    {badge.label}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Nav links */}
-        <nav className="flex-1 py-3 px-2 space-y-0.5">
-          {links.map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              title={collapsed ? label : undefined}
-              className={`flex items-center gap-3 px-2 py-2.5 rounded-lg text-sm font-medium transition-colors
-                ${isActive(href) ? "bg-blue-600 text-white" : "text-gray-300 hover:bg-gray-800 hover:text-white"}
-                ${collapsed ? "justify-center" : ""}`}
-            >
-              <Icon size={18} className="shrink-0" />
-              {!collapsed && label}
-            </Link>
-          ))}
+        {/* Nav */}
+        <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
+          {links.map(({ href, label, icon: Icon }) => {
+            const active = isActive(href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                title={collapsed ? label : undefined}
+                className={`flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-sm font-medium transition-all
+                  ${collapsed ? "justify-center" : ""}
+                  ${active ? "text-white shadow-sm" : "hover:text-white"}`}
+                style={
+                  active
+                    ? { background: "var(--sidebar-active)", color: "#fff" }
+                    : { color: "var(--sidebar-fg)" }
+                }
+                onMouseEnter={(e) => {
+                  if (!active)
+                    (e.currentTarget as HTMLElement).style.background =
+                      "var(--sidebar-hover)";
+                }}
+                onMouseLeave={(e) => {
+                  if (!active)
+                    (e.currentTarget as HTMLElement).style.background =
+                      "transparent";
+                }}
+              >
+                <Icon size={17} className="shrink-0" />
+                {!collapsed && label}
+              </Link>
+            );
+          })}
         </nav>
 
-        {/* Bottom controls */}
-        <div className="border-t border-gray-700 px-2 py-3 space-y-1">
-          {!collapsed && (
-            <div className="px-2 py-1 text-xs text-gray-400 truncate">
-              {session?.user?.email}
-            </div>
-          )}
+        {/* Bottom */}
+        <div
+          className="px-2 py-3 space-y-0.5 shrink-0"
+          style={{ borderTop: "1px solid var(--sidebar-border)" }}
+        >
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
             title={collapsed ? "Sign out" : undefined}
-            className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 text-sm transition-colors ${collapsed ? "justify-center" : ""}`}
+            className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-sm transition-all ${collapsed ? "justify-center" : ""}`}
+            style={{ color: "var(--sidebar-fg)" }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.background =
+                "var(--sidebar-hover)";
+              (e.currentTarget as HTMLElement).style.color = "#fff";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.background = "transparent";
+              (e.currentTarget as HTMLElement).style.color =
+                "var(--sidebar-fg)";
+            }}
           >
-            <LogOut size={16} className="shrink-0" />
+            <LogOut size={15} className="shrink-0" />
             {!collapsed && "Sign out"}
           </button>
           <button
             onClick={toggleCollapse}
             title={collapsed ? "Expand" : "Collapse"}
-            className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-gray-500 hover:text-gray-300 hover:bg-gray-800 text-xs transition-colors ${collapsed ? "justify-center" : ""}`}
+            className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs transition-all ${collapsed ? "justify-center" : ""}`}
+            style={{ color: "var(--sidebar-fg-muted)" }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.background =
+                "var(--sidebar-hover)";
+              (e.currentTarget as HTMLElement).style.color =
+                "var(--sidebar-fg)";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.background = "transparent";
+              (e.currentTarget as HTMLElement).style.color =
+                "var(--sidebar-fg-muted)";
+            }}
           >
             {collapsed ? (
-              <ChevronRight size={15} />
+              <ChevronRight size={14} />
             ) : (
               <>
-                <ChevronLeft size={15} />
+                <ChevronLeft size={14} />
                 <span>Collapse</span>
               </>
             )}
@@ -172,24 +236,29 @@ export function Navbar() {
         </div>
       </aside>
 
-      {/* ── Mobile top bar ── */}
-      <div className="md:hidden fixed top-0 left-0 right-0 h-14 bg-gray-900 text-white z-50 flex items-center justify-between px-4">
+      {/* ── Mobile top bar ─────────────────────────────────────────── */}
+      <div
+        className="md:hidden fixed top-0 left-0 right-0 h-14 z-50 flex items-center justify-between px-4"
+        style={{
+          background: "var(--sidebar-bg)",
+          borderBottom: "1px solid var(--sidebar-border)",
+        }}
+      >
         <div className="flex items-center gap-2">
-          <span className="text-xl">🍽️</span>
-          <span className="font-bold text-sm">RestaurantPOS</span>
-          {badge && (
-            <span
-              className={`hidden xs:inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${badge.color}`}
-            >
-              {badge.label}
-            </span>
-          )}
+          <div
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-sm"
+            style={{ background: "var(--sidebar-active)" }}
+          >
+            🍽️
+          </div>
+          <span className="font-bold text-sm text-white">RestaurantPOS</span>
         </div>
         <button
           onClick={() => setMobileOpen(true)}
-          className="p-2 text-gray-300 hover:text-white"
+          className="p-2"
+          style={{ color: "var(--sidebar-fg)" }}
         >
-          <Menu size={22} />
+          <Menu size={20} />
         </button>
       </div>
 
@@ -197,84 +266,131 @@ export function Navbar() {
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-50 flex">
           <div
-            className="absolute inset-0 bg-black/60"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="relative w-64 bg-gray-900 text-white flex flex-col h-full shadow-2xl">
-            <div className="flex items-center justify-between p-4 border-b border-gray-700 h-14">
+          <aside
+            className="relative w-72 flex flex-col h-full shadow-2xl"
+            style={{ background: "var(--sidebar-bg)" }}
+          >
+            <div
+              className="flex items-center justify-between px-4 h-14 shrink-0"
+              style={{ borderBottom: "1px solid var(--sidebar-border)" }}
+            >
               <div className="flex items-center gap-2">
-                <span className="text-xl">🍽️</span>
-                <span className="font-bold text-sm">RestaurantPOS</span>
+                <div
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-sm"
+                  style={{ background: "var(--sidebar-active)" }}
+                >
+                  🍽️
+                </div>
+                <span className="font-bold text-sm text-white">
+                  RestaurantPOS
+                </span>
               </div>
               <button
                 onClick={() => setMobileOpen(false)}
-                className="text-gray-400 hover:text-white"
+                style={{ color: "var(--sidebar-fg)" }}
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
-            {/* User info in drawer */}
-            <div className="px-4 py-3 border-b border-gray-800 space-y-0.5">
-              <div className="text-sm font-medium text-gray-200">
-                {session?.user?.name}
-              </div>
-              <div className="text-xs text-gray-500">
-                {session?.user?.email}
-              </div>
-              {badge && (
-                <span
-                  className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${badge.color}`}
+
+            {/* User card in drawer */}
+            <div
+              className="px-4 py-4 shrink-0"
+              style={{ borderBottom: "1px solid var(--sidebar-border)" }}
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
+                  style={{ background: "var(--sidebar-active)" }}
                 >
-                  {badge.label}
-                </span>
-              )}
+                  {session?.user?.name?.[0]?.toUpperCase() ?? "?"}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-white truncate">
+                    {session?.user?.name}
+                  </div>
+                  <div
+                    className="text-xs truncate"
+                    style={{ color: "var(--sidebar-fg)" }}
+                  >
+                    {session?.user?.email}
+                  </div>
+                  {badge && (
+                    <span
+                      className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${badge.bg} ${badge.text}`}
+                    >
+                      {badge.label}
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
-            <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
-              {links.map(({ href, label, icon: Icon }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  onClick={() => setMobileOpen(false)}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
-                    ${isActive(href) ? "bg-blue-600 text-white" : "text-gray-300 hover:bg-gray-800"}`}
-                >
-                  <Icon size={18} />
-                  {label}
-                </Link>
-              ))}
+
+            <nav className="flex-1 py-3 px-3 space-y-0.5 overflow-y-auto">
+              {links.map(({ href, label, icon: Icon }) => {
+                const active = isActive(href);
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all"
+                    style={
+                      active
+                        ? { background: "var(--sidebar-active)", color: "#fff" }
+                        : { color: "var(--sidebar-fg)" }
+                    }
+                  >
+                    <Icon size={17} />
+                    {label}
+                  </Link>
+                );
+              })}
             </nav>
-            <div className="border-t border-gray-700 p-4">
+
+            <div
+              className="p-4 shrink-0"
+              style={{ borderTop: "1px solid var(--sidebar-border)" }}
+            >
               <button
                 onClick={() => signOut({ callbackUrl: "/login" })}
-                className="flex items-center gap-2 text-gray-400 hover:text-white text-sm w-full"
+                className="flex items-center gap-2 text-sm w-full px-3 py-2 rounded-xl transition-all"
+                style={{ color: "var(--sidebar-fg)" }}
               >
-                <LogOut size={16} /> Sign out
+                <LogOut size={15} /> Sign out
               </button>
             </div>
           </aside>
         </div>
       )}
 
-      {/* Mobile bottom tab bar — show up to 4 most important links */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex z-40">
-        {links.slice(0, 4).map(({ href, label, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            className={`flex-1 flex flex-col items-center py-2 text-xs gap-0.5
-              ${isActive(href) ? "text-blue-600" : "text-gray-500"}`}
-          >
-            <Icon size={20} />
-            {label}
-          </Link>
-        ))}
-        <button
-          onClick={() => signOut({ callbackUrl: "/login" })}
-          className="flex-1 flex flex-col items-center py-2 text-xs gap-0.5 text-gray-500"
-        >
-          <LogOut size={20} />
-          Out
-        </button>
+      {/* ── Mobile bottom tab bar ─────────────────────────────────── */}
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 flex"
+        style={{
+          background: "var(--sidebar-bg)",
+          borderTop: "1px solid var(--sidebar-border)",
+        }}
+      >
+        {links.slice(0, 5).map(({ href, label, icon: Icon }) => {
+          const active = isActive(href);
+          return (
+            <Link
+              key={href}
+              href={href}
+              className="flex-1 flex flex-col items-center py-2.5 gap-1 text-[10px] font-medium transition-colors"
+              style={{
+                color: active ? "var(--sidebar-active)" : "var(--sidebar-fg)",
+              }}
+            >
+              <Icon size={19} />
+              {label}
+            </Link>
+          );
+        })}
       </nav>
     </>
   );

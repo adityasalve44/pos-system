@@ -17,6 +17,7 @@ import {
   Tag,
   Trash2,
   ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import type { Product } from "@/types";
 
@@ -34,8 +35,15 @@ export default function ProductsPage() {
   const [form, setForm] = useState({ name: "", category: "", price: "" });
   const [newCatName, setNewCatName] = useState("");
   const [addingCat, setAddingCat] = useState(false);
-
+  // Only one category can be expanded at a time
   const catNames = categories?.map((c) => c.name) ?? [];
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(
+    catNames[0] ?? null
+  );
+
+  function toggleExpandCategory(cat: string) {
+    setExpandedCategory(expandedCategory === cat ? null : cat);
+  }
 
   function openCreate() {
     setEditing(null);
@@ -72,7 +80,7 @@ export default function ProductsPage() {
               disabled={catNames.length === 0}
               className="flex items-center gap-1.5 bg-blue-600 text-white px-3 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 disabled:opacity-40 active:scale-95"
             >
-              <Plus size={16} /> Add Item
+              <Plus size={15} /> Add Item
             </button>
           )}
           {tab === "categories" && (
@@ -80,7 +88,7 @@ export default function ProductsPage() {
               onClick={() => setAddingCat(true)}
               className="flex items-center gap-1.5 bg-blue-600 text-white px-3 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 active:scale-95"
             >
-              <Plus size={16} /> Add Category
+              <Plus size={15} /> Add Category
             </button>
           )}
         </div>
@@ -92,7 +100,11 @@ export default function ProductsPage() {
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors capitalize ${tab === t ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"}`}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors capitalize ${
+              tab === t
+                ? "bg-white shadow-sm text-gray-900"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
           >
             {t}
           </button>
@@ -194,63 +206,88 @@ export default function ProductsPage() {
               ))}
             </div>
           ) : (
-            <div className="space-y-5">
+            <div className="space-y-3">
               {catNames.map((cat) => {
                 const catProducts =
                   products?.filter((p) => p.category === cat) ?? [];
                 if (!catProducts.length) return null;
+                const isCollapsed = expandedCategory !== cat;
                 return (
-                  <div key={cat}>
-                    <div className="flex items-center gap-2 mb-2">
+                  <div
+                    key={cat}
+                    className="bg-white rounded-xl border overflow-hidden"
+                  >
+                    {/* Collapsible category header */}
+                    <button
+                      onClick={() => toggleExpandCategory(cat)}
+                      className="w-full flex items-center gap-2 px-4 py-3 hover:bg-gray-50 transition-colors border-b last:border-b-0"
+                    >
+                      <span
+                        className="transition-transform duration-200"
+                        style={{
+                          transform: isCollapsed
+                            ? "rotate(0deg)"
+                            : "rotate(90deg)",
+                        }}
+                      >
+                        <ChevronRight size={14} className="text-gray-400" />
+                      </span>
                       <Tag size={12} className="text-gray-400" />
-                      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex-1 text-left">
                         {cat}
                       </span>
-                      <span className="text-xs text-gray-300">
-                        ({catProducts.length})
+                      <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                        {catProducts.length}
                       </span>
-                    </div>
-                    <div className="bg-white rounded-xl border divide-y">
-                      {catProducts.map((product) => (
-                        <div
-                          key={product.id}
-                          className={`flex items-center gap-3 p-3 md:p-4 ${!product.isAvailable ? "opacity-50" : ""}`}
-                        >
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-gray-900 text-sm">
-                              {product.name}
+                    </button>
+
+                    {/* Products — hidden when collapsed */}
+                    {!isCollapsed && (
+                      <div className="divide-y">
+                        {catProducts.map((product) => (
+                          <div
+                            key={product.id}
+                            className={`flex items-center gap-3 px-4 py-3 ${!product.isAvailable ? "opacity-50" : ""}`}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-gray-900 text-sm">
+                                {product.name}
+                              </div>
+                              <div className="text-xs font-semibold text-blue-600">
+                                {formatCurrency(product.price)}
+                              </div>
                             </div>
-                            <div className="text-xs font-semibold text-blue-600">
-                              {formatCurrency(product.price)}
-                            </div>
+                            <button
+                              onClick={() =>
+                                updateProduct.mutateAsync({
+                                  id: product.id,
+                                  isAvailable: product.isAvailable ? 0 : 1,
+                                })
+                              }
+                              className="shrink-0"
+                            >
+                              {product.isAvailable ? (
+                                <ToggleRight
+                                  size={22}
+                                  className="text-green-500"
+                                />
+                              ) : (
+                                <ToggleLeft
+                                  size={22}
+                                  className="text-gray-300"
+                                />
+                              )}
+                            </button>
+                            <button
+                              onClick={() => openEdit(product)}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                            >
+                              <Pencil size={13} />
+                            </button>
                           </div>
-                          <button
-                            onClick={() =>
-                              updateProduct.mutateAsync({
-                                id: product.id,
-                                isAvailable: product.isAvailable ? 0 : 1,
-                              })
-                            }
-                            className="shrink-0"
-                          >
-                            {product.isAvailable ? (
-                              <ToggleRight
-                                size={22}
-                                className="text-green-500"
-                              />
-                            ) : (
-                              <ToggleLeft size={22} className="text-gray-300" />
-                            )}
-                          </button>
-                          <button
-                            onClick={() => openEdit(product)}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                          >
-                            <Pencil size={14} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -265,11 +302,11 @@ export default function ProductsPage() {
         </>
       )}
 
-      {/* Product form – Fix 6: category as <select> dropdown */}
+      {/* Product form */}
       {showProductForm && (
         <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl">
-            <h2 className="text-lg font-bold mb-4">
+            <h2 className="text-base font-bold mb-4">
               {editing ? "Edit Item" : "Add Menu Item"}
             </h2>
             <div className="space-y-3 mb-5">
@@ -325,10 +362,10 @@ export default function ProductsPage() {
                 />
               </div>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-2">
               <button
                 onClick={() => setShowProductForm(false)}
-                className="flex-1 py-2.5 border rounded-xl font-medium text-gray-700 text-sm"
+                className="flex-1 py-2.5 border rounded-xl font-medium text-gray-700 text-sm hover:bg-gray-50"
               >
                 Cancel
               </button>

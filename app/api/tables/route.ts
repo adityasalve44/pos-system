@@ -5,7 +5,7 @@ import { tables, orders } from "@/lib/db/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { can } from "@/lib/rbac";
-import type { Role } from "@/lib/rbac";
+// import type { Role } from "@/lib/rbac";
 
 export async function GET() {
   const session = await auth();
