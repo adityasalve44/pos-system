@@ -18,6 +18,7 @@ const PUBLIC_PATHS = new Set(["/login"]);
 function isPassthrough(pathname: string): boolean {
   return (
     pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/seed") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon")
   );
