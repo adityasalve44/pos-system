@@ -170,8 +170,8 @@ export function OrderSheet({ orderId, onBill }: Props) {
             className="bg-white rounded-2xl p-6 max-w-xs w-full shadow-2xl text-center"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <AlertTriangle size={18} className="text-orange-500" />
+            <div className="w-10 h-10 bg-sky-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <AlertTriangle size={18} className="text-aky-500" />
             </div>
             <h3 className="font-bold text-gray-900 text-base mb-1">
               Generate Bill?

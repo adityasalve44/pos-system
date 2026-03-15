@@ -402,7 +402,7 @@ export default function StaffPage() {
                               {member.name}
                             </span>
                             {isSelf && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold">
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold">
                                 You
                               </span>
                             )}
@@ -420,12 +420,12 @@ export default function StaffPage() {
                           </p>
                         </div>
 
-                        <div className="hidden sm:block text-xs text-gray-300 text-right mr-1">
+                        <div className="hidden sm:block text-xs text-gray-600 text-right mr-1">
                           <p>{meta.desc}</p>
                         </div>
 
                         {isAdmin ? (
-                          <div className="px-2 text-gray-200">
+                          <div className="px-2 text-gray-400">
                             <ShieldCheck size={14} />
                           </div>
                         ) : (
@@ -433,7 +433,7 @@ export default function StaffPage() {
                             <ActionBtn
                               icon={<Pencil size={13} />}
                               label="Edit"
-                              hoverClass="hover:text-blue-600 hover:bg-blue-50"
+                              hoverClass="text-gray-400 hover:text-blue-600 hover:bg-blue-50"
                               onClick={() => {
                                 setSelected(member);
                                 setForm({
@@ -448,7 +448,7 @@ export default function StaffPage() {
                             <ActionBtn
                               icon={<Key size={13} />}
                               label="Reset password"
-                              hoverClass="hover:text-violet-600 hover:bg-violet-50"
+                              hoverClass="text-gray-400 hover:text-violet-600 hover:bg-violet-50"
                               onClick={() => {
                                 setSelected(member);
                                 setPw({ password: "", confirm: "" });
@@ -469,8 +469,8 @@ export default function StaffPage() {
                                 }
                                 hoverClass={
                                   member.isActive
-                                    ? "hover:text-red-500 hover:bg-red-50"
-                                    : "hover:text-emerald-600 hover:bg-emerald-50"
+                                    ? "text-gray-400 hover:text-red-500 hover:bg-red-50"
+                                    : "text-gray-400 hover:text-emerald-600 hover:bg-emerald-50"
                                 }
                                 onClick={() =>
                                   toggleMutation.mutate({
@@ -540,15 +540,15 @@ export default function StaffPage() {
                     <button
                       key={r}
                       onClick={() => setForm((f) => ({ ...f, role: r }))}
-                      className={`flex items-center gap-2.5 p-3 rounded-xl border-2 text-left transition-all ${active ? "border-orange-400 bg-orange-50" : "border-gray-100 hover:border-gray-200 bg-gray-50"}`}
+                      className={`flex items-center gap-2.5 p-3 rounded-xl border-2 text-left transition-all ${active ? "border-sky-400 bg-sky-50" : "border-gray-100 hover:border-gray-200 bg-gray-50"}`}
                     >
                       <meta.Icon
                         size={16}
-                        className={active ? "text-orange-500" : "text-gray-400"}
+                        className={active ? "text-sky-500" : "text-gray-400"}
                       />
                       <div>
                         <p
-                          className={`text-sm font-semibold leading-tight ${active ? "text-orange-700" : "text-gray-700"}`}
+                          className={`text-sm font-semibold leading-tight ${active ? "text-sky-700" : "text-gray-700"}`}
                         >
                           {meta.label}
                         </p>

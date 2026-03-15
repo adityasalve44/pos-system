@@ -96,7 +96,7 @@ function RestaurantPanel() {
     <div className="space-y-4">
       <div className="bg-white rounded-xl border p-5 space-y-4">
         <SectionTitle
-          icon={<Store size={15} className="text-orange-500" />}
+          icon={<Store size={15} className="text-sky-500" />}
           title="Restaurant Info"
         />
         <Field label="Restaurant Name">
@@ -202,7 +202,7 @@ function TaxPanel() {
                   <button
                     key={t}
                     onClick={() => setForm({ ...form, gstType: t })}
-                    className={`py-2 rounded-xl text-xs font-medium border-2 transition-colors ${form.gstType === t ? "border-orange-500 bg-orange-50 text-orange-700" : "border-gray-200 text-gray-600"}`}
+                    className={`py-2 rounded-xl text-xs font-medium border-2 transition-colors ${form.gstType === t ? "border-sky-500 bg-sky-50 text-sky-700" : "border-gray-200 text-gray-600"}`}
                   >
                     {t === "CGST_SGST" ? "CGST+SGST" : t}
                   </button>
@@ -276,7 +276,7 @@ function TablesPanel() {
       {/* Summary card + link */}
       <button
         onClick={() => router.push("/settings/tables")}
-        className="w-full bg-white rounded-xl border p-5 flex items-center gap-4 hover:border-orange-300 hover:shadow-sm transition-all group text-left"
+        className="w-full bg-white rounded-xl border p-5 flex items-center gap-4 hover:border-sky-300 hover:shadow-sm transition-all group text-left"
       >
         <div
           className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
@@ -301,7 +301,7 @@ function TablesPanel() {
         </div>
         <ChevronRight
           size={16}
-          className="text-gray-300 group-hover:text-orange-400 transition-colors shrink-0"
+          className="text-gray-300 group-hover:text-sky-400 transition-colors shrink-0"
         />
       </button>
 

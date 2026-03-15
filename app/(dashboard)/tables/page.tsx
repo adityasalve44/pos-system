@@ -53,7 +53,7 @@ export default function TablesPage() {
     <div className="p-4 md:p-6 max-w-6xl mx-auto">
       {/* Conflict banner */}
       {conflict && (
-        <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+        <div className="mb-4 bg-amber-50 border-none border-amber-200 rounded-xl p-4 flex items-start gap-3">
           <AlertTriangle className="text-amber-500 shrink-0 mt-0.5" size={18} />
           <div className="flex-1">
             <p className="font-semibold text-amber-800 text-sm">
@@ -103,7 +103,7 @@ export default function TablesPage() {
         <button
           onClick={() => refetch()}
           disabled={isFetching}
-          className="p-2 rounded-full hover:bg-gray-100 text-gray-400 disabled:opacity-50 transition-colors"
+          className="p-2 rounded-full shadow-card hover:bg-gray-100 text-gray-400 disabled:opacity-50 transition-colors"
           title="Refresh"
         >
           <RefreshCw size={16} className={isFetching ? "animate-spin" : ""} />
@@ -134,7 +134,7 @@ export default function TablesPage() {
                   !isOpening &&
                   handleTableTap(table)
                 }
-                className={`relative rounded-xl p-3 border-2 transition-all select-none h-28
+                className={`relative shadow-card rounded-xl p-3 border-none transition-all select-none h-28
                   ${table.status !== "reserved" ? "cursor-pointer active:scale-95" : "opacity-60 cursor-not-allowed"}
                   ${isOpening ? "pointer-events-none opacity-75" : ""}`}
                 style={
@@ -152,7 +152,7 @@ export default function TablesPage() {
                 }
               >
                 {isOpening && (
-                  <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-white/70 backdrop-blur-sm z-10">
+                  <div className="absolute  inset-0 flex items-center justify-center rounded-xl bg-white/70 backdrop-blur-sm z-10">
                     <Loader2
                       size={20}
                       className="animate-spin"
@@ -162,7 +162,7 @@ export default function TablesPage() {
                 )}
 
                 {/* Status dot + name */}
-                <div className="flex items-center gap-1.5 mb-1">
+                <div className="flex items-center  gap-1.5 mb-1">
                   <span
                     className="w-2 h-2 rounded-full shrink-0"
                     style={{
@@ -173,12 +173,12 @@ export default function TablesPage() {
                           : "#f59e0b",
                     }}
                   />
-                  <span className="font-bold text-gray-900 text-sm truncate">
+                  <span className="font-medium text-gray-800  text-sm truncate">
                     {table.name}
                   </span>
                 </div>
 
-                <div className="absolute bottom-2 right-2 bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                <div className="absolute bottom-2 right-2 shadow-sm bg-gray-50 text-slate-700 text-xs px-2 py-1 rounded-full flex items-center gap-1">
                   <Users size={10} /> {table.capacity}
                 </div>
 

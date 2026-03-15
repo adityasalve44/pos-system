@@ -4,31 +4,31 @@
 @layer base {
   :root {
     /* Sidebar */
-    --sidebar-bg: #0f172a;
-    --sidebar-border: #1e293b;
-    --sidebar-active: #f97316;
-    --sidebar-active-fg: #fff;
-    --sidebar-hover: #1e293b;
-    --sidebar-fg: #94a3b8;
-    --sidebar-fg-muted: #475569;
+    --sidebar-bg: #f8fafc;
+    --sidebar-border: #e2e8f0;
+    --sidebar-active: #60a5fa;
+    --sidebar-active-fg: #ffffff;
+    --sidebar-hover: #93c5fd;
+    --sidebar-fg: #1e293b;
+    --sidebar-fg-muted: #64748b;
 
     /* App chrome */
-    --app-bg: #f8fafc;
+    --app-bg: #f5f5f5;
     --surface: #ffffff;
-    --border: #e2e8f0;
+    --border: #d7e3fc;
 
     /* Brand */
-    --brand: #f97316;
+    --brand: #00509d;
     --brand-hover: #ea6c0a;
     --brand-light: #fff7ed;
 
     /* Status colours */
-    --available: #10b981;
-    --available-bg: #f0fdf4;
+    --available: #004e98;
+    --available-bg: #d7e3fc;
     --available-border: #bbf7d0;
-    --occupied: #f59e0b;
-    --occupied-bg: #fffbeb;
-    --occupied-border: #fde68a;
+    --occupied: #bf0603;
+    --occupied-bg: #f7cad0;
+    --occupied-border: #1da1f2;
   }
 }
 
@@ -51,13 +51,23 @@
 
 /* Shared input style used across settings and forms */
 .input {
-  @apply w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-400;
+  @apply w-full bg-transparent border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors;
 }
-
 /* Hide scrollbars but keep scroll */
 .scrollbar-hide {
   scrollbar-width: none;
 }
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+.shadow-card {
+  box-shadow:
+    rgba(0, 0, 0, 0.08) 0px 0.706592px 0.706592px -0.666667px,
+    rgba(0, 0, 0, 0.08) 0px 1.80656px 1.80656px -1.33333px,
+    rgba(0, 0, 0, 0.07) 0px 3.62176px 3.62176px -2px,
+    rgba(0, 0, 0, 0.07) 0px 6.8656px 6.8656px -2.66667px,
+    rgba(0, 0, 0, 0.05) 0px 13.6468px 13.6468px -3.33333px,
+    rgba(0, 0, 0, 0.02) 0px 30px 30px -4px,
+    rgb(255, 255, 255) 0px 3px 1px 0px inset;
 }

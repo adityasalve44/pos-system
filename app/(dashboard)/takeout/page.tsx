@@ -73,7 +73,7 @@ export default function TakeoutPage() {
             <button
               key={order.id}
               onClick={() => router.push(`/orders/${order.id}`)}
-              className="w-full text-left bg-white border border-gray-200 rounded-xl p-4 hover:border-orange-200 hover:shadow-sm transition-all active:scale-[0.99] group"
+              className="w-full text-left bg-white border border-gray-200 rounded-xl p-4 hover:border-sky-200 hover:shadow-sm transition-all active:scale-[0.99] group"
             >
               <div className="flex items-center gap-3">
                 <div

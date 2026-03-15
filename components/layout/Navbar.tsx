@@ -52,7 +52,7 @@ const NAV: NavItem[] = [
 
 const ROLE_BADGE: Record<string, { label: string; bg: string; text: string }> =
   {
-    admin: { label: "Admin", bg: "bg-orange-500/20", text: "text-orange-300" },
+    admin: { label: "Admin", bg: "bg-blue-500/20", text: "text-blue-300" },
     manager: { label: "Manager", bg: "bg-sky-500/20", text: "text-sky-300" },
     staff: { label: "Staff", bg: "bg-slate-500/20", text: "text-slate-300" },
   };
@@ -113,7 +113,10 @@ export function Navbar() {
             <span className="text-sm">🍽️</span>
           </div>
           {!collapsed && (
-            <span className="font-bold text-sm text-white tracking-tight">
+            <span
+              className="font-bold text-sm"
+              style={{ color: "var(--sidebar-fg)" }}
+            >
               RestaurantPOS
             </span>
           )}
@@ -133,8 +136,11 @@ export function Navbar() {
                 {session?.user?.name?.[0]?.toUpperCase() ?? "?"}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-xs font-semibold text-white truncate">
-                  {session?.user?.name}
+                <div
+                  className="text-xs font-semibold truncate"
+                  style={{ color: "var(--sidebar-fg)" }}
+                >
+                  <span style={{ color: "var(--sidebar-fg)" }}>{session?.user?.name}</span>
                 </div>
                 {badge && (
                   <span
@@ -251,7 +257,12 @@ export function Navbar() {
           >
             🍽️
           </div>
-          <span className="font-bold text-sm text-white">RestaurantPOS</span>
+          <span
+            className="font-bold text-sm"
+            style={{ color: "var(--sidebar-fg)" }}
+          >
+            RestaurantPOS
+          </span>
         </div>
         <button
           onClick={() => setMobileOpen(true)}
@@ -284,7 +295,10 @@ export function Navbar() {
                 >
                   🍽️
                 </div>
-                <span className="font-bold text-sm text-white">
+                <span
+                  className="font-bold text-sm"
+                  style={{ color: "var(--sidebar-fg)" }}
+                >
                   RestaurantPOS
                 </span>
               </div>
