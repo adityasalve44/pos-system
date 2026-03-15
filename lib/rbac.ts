@@ -6,7 +6,6 @@
  */
 import type { UserRole } from "@/types";
 
-/** Re-export so existing `import { Role } from "@/lib/rbac"` keep working */
 export type Role = UserRole;
 
 export const PERMISSIONS = {
@@ -14,7 +13,7 @@ export const PERMISSIONS = {
   tables_view:       ["admin", "manager", "staff"] as Role[],
   tables_create:     ["admin", "manager"] as Role[],
   tables_edit:       ["admin", "manager"] as Role[],
-  tables_delete:     ["admin"] as Role[],
+  tables_delete:     ["admin",] as Role[],
 
   // Orders
   orders_create:     ["admin", "manager", "staff"] as Role[],
@@ -25,18 +24,18 @@ export const PERMISSIONS = {
 
   // Products / Categories
   products_view:     ["admin", "manager", "staff"] as Role[],
-  products_manage:   ["admin"] as Role[],
-  categories_manage: ["admin"] as Role[],
+  products_manage:   ["admin", "manager"] as Role[],
+  categories_manage: ["admin", "manager"] as Role[],
 
   // Reports
   reports_view:      ["admin", "manager"] as Role[],
 
   // Settings
-  settings_view:     ["admin"] as Role[],
+  settings_view:     ["admin", "manager"] as Role[],
   settings_edit:     ["admin"] as Role[],
 
   // Staff management
-  staff_view:        ["admin"] as Role[],
+  staff_view:        ["admin", "manager"] as Role[],
   staff_manage:      ["admin"] as Role[],
 } as const;
 
@@ -58,10 +57,10 @@ export const ROUTE_ROLES: Record<string, Role[]> = {
   "/tables":   ["admin", "manager", "staff"],
   "/takeout":  ["admin", "manager", "staff"],
   "/orders":   ["admin", "manager", "staff"],
-  "/products": ["admin"],
+  "/products": ["admin", "manager"],
   "/reports":  ["admin", "manager"],
-  "/settings": ["admin"],
-  "/staff":    ["admin"],
+  "/settings": ["admin", "manager"],
+  "/staff":    ["admin", "manager"],
 };
 
 export function canAccessRoute(role: Role | undefined | null, pathname: string): boolean {
