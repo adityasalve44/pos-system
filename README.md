@@ -61,7 +61,6 @@ pos-system/
 │       └── reports/            ← Revenue reports
 ├── components/
 │   ├── layout/                 ← Navbar, Providers
-│   ├── tables/                 ← TableGrid, TableCard
 │   ├── orders/                 ← OrderSheet
 │   ├── products/               ← ProductGrid
 │   └── billing/                ← PaymentModal, ReceiptView
