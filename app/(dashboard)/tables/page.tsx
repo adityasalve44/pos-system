@@ -178,8 +178,8 @@ export default function TablesPage() {
                   </span>
                 </div>
 
-                <div className="flex items-center gap-1 text-gray-400 text-xs mb-1">
-                  <Users size={10} /> {table.capacity} seats
+                <div className="absolute bottom-2 right-2 bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                  <Users size={10} /> {table.capacity}
                 </div>
 
                 {table.activeOrder ? (
@@ -196,13 +196,6 @@ export default function TablesPage() {
                     <div className="text-gray-400 truncate">
                       {formatRelative(table.activeOrder.openedAt)}
                     </div>
-                  </div>
-                ) : isAvailable ? (
-                  <div
-                    className="text-xs font-medium mt-1"
-                    style={{ color: "var(--available)" }}
-                  >
-                    Tap to open
                   </div>
                 ) : null}
               </div>
