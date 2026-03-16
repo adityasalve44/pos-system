@@ -130,7 +130,7 @@ export function Navbar() {
           >
             <div className="flex items-center gap-2.5">
               <div
-                className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+                className="w-7 h-7 rounded-full flex items-center justify-center text-xs text-white font-bold shrink-0"
                 style={{ background: "var(--sidebar-active)" }}
               >
                 {session?.user?.name?.[0]?.toUpperCase() ?? "?"}
@@ -140,7 +140,9 @@ export function Navbar() {
                   className="text-xs font-semibold truncate"
                   style={{ color: "var(--sidebar-fg)" }}
                 >
-                  <span style={{ color: "var(--sidebar-fg)" }}>{session?.user?.name}</span>
+                  <span style={{ color: "var(--sidebar-fg)" }}>
+                    {session?.user?.name}
+                  </span>
                 </div>
                 {badge && (
                   <span
@@ -317,14 +319,16 @@ export function Navbar() {
             >
               <div className="flex items-center gap-3">
                 <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-sm text-white font-bold shrink-0"
                   style={{ background: "var(--sidebar-active)" }}
                 >
                   {session?.user?.name?.[0]?.toUpperCase() ?? "?"}
                 </div>
                 <div className="min-w-0">
-                  <div className="text-sm font-semibold text-white truncate">
-                    {session?.user?.name}
+                  <div className="text-sm font-semibold truncate">
+                    <span style={{ color: "var(--sidebar-fg)" }}>
+                      {session?.user?.name}
+                    </span>
                   </div>
                   <div
                     className="text-xs truncate"

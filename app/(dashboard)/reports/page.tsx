@@ -97,7 +97,7 @@ export default function ReportsPage() {
       <h1 className="text-xl md:text-2xl font-bold text-gray-900">Reports</h1>
 
       {/* Daily summary */}
-      <div className="bg-white rounded-xl border p-5">
+      <div className="bg-white rounded-xl border-2 p-5">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2 font-semibold text-gray-900 text-sm">
             <BarChart2 size={15} style={{ color: "var(--brand)" }} /> Daily
@@ -113,7 +113,7 @@ export default function ReportsPage() {
 
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div
-            className="rounded-xl p-4"
+            className="rounded-xl p-4 border"
             style={{ background: "var(--brand-light)" }}
           >
             <div
@@ -126,7 +126,7 @@ export default function ReportsPage() {
               {formatCurrency(daily?.totalRevenue ?? 0)}
             </div>
           </div>
-          <div className="bg-blue-50 rounded-xl p-4">
+          <div className="bg-blue-50 border rounded-xl p-4">
             <div className="flex items-center gap-1.5 text-xs font-medium text-blue-600 mb-2">
               <ShoppingBag size={12} /> Orders
             </div>
@@ -164,7 +164,7 @@ export default function ReportsPage() {
       </div>
 
       {/* Order history */}
-      <div className="bg-white rounded-xl border p-5">
+      <div className="bg-white rounded-xl border-2 p-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2 font-semibold text-gray-900 text-sm">
             <Calendar size={15} className="text-purple-500" /> Order History

@@ -123,7 +123,7 @@ export default function ProductsPage() {
                 onChange={(e) => setNewCatName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && addCategory()}
                 placeholder="Category name e.g. Starters, Biryani…"
-                className="flex-1 px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-3 py-2.5 border border-[#e2e8f0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <button
                 onClick={addCategory}
@@ -149,7 +149,7 @@ export default function ProductsPage() {
               </p>
             </div>
           ) : (
-            <div className="bg-white rounded-xl border divide-y">
+            <div className="bg-white rounded-xl border border-[#e2e8f0] divide-y">
               {categories.map((cat) => {
                 const count =
                   products?.filter((p) => p.category === cat.name).length ?? 0;
@@ -186,7 +186,7 @@ export default function ProductsPage() {
       {tab === "products" && (
         <>
           {catNames.length === 0 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-sm text-amber-800 flex items-center gap-2">
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-4 text-sm text-emerald-800 flex items-center gap-2">
               ⚠️ Create a category first.
               <button
                 onClick={() => setTab("categories")}
@@ -215,12 +215,12 @@ export default function ProductsPage() {
                 return (
                   <div
                     key={cat}
-                    className="bg-white rounded-xl border overflow-hidden"
+                    className="bg-white  rounded-xl border border-[#e2e8f0] overflow-hidden"
                   >
                     {/* Collapsible category header */}
                     <button
                       onClick={() => toggleExpandCategory(cat)}
-                      className="w-full flex items-center gap-2 px-4 py-3 hover:bg-gray-50 transition-colors border-b last:border-b-0"
+                      className="w-full flex items-center gap-2 px-4 py-3 hover:bg-gray-50 transition-colors border border-[#e2e8f0] "
                     >
                       <span
                         className="transition-transform duration-200"
@@ -230,7 +230,7 @@ export default function ProductsPage() {
                             : "rotate(90deg)",
                         }}
                       >
-                        <ChevronRight size={14} className="text-gray-400" />
+                        <ChevronRight size={20} className="text-gray-400" />
                       </span>
                       <Tag size={12} className="text-gray-400" />
                       <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider flex-1 text-left">
@@ -269,7 +269,7 @@ export default function ProductsPage() {
                               {product.isAvailable ? (
                                 <ToggleRight
                                   size={22}
-                                  className="text-green-500"
+                                  className="text-blue-500"
                                 />
                               ) : (
                                 <ToggleLeft
@@ -319,7 +319,7 @@ export default function ProductsPage() {
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   placeholder="e.g. Chicken Biryani"
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2.5 border border-[#e2e8f0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
@@ -332,7 +332,7 @@ export default function ProductsPage() {
                     onChange={(e) =>
                       setForm({ ...form, category: e.target.value })
                     }
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-white pr-8"
+                    className="w-full px-3 py-2.5 border border-[#e2e8f0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-white pr-8"
                   >
                     <option value="">Select category…</option>
                     {catNames.map((c) => (
@@ -358,14 +358,14 @@ export default function ProductsPage() {
                   value={form.price}
                   onChange={(e) => setForm({ ...form, price: e.target.value })}
                   placeholder="0.00"
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2.5 border border-[#e2e8f0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={() => setShowProductForm(false)}
-                className="flex-1 py-2.5 border rounded-xl font-medium text-gray-700 text-sm hover:bg-gray-50"
+                className="flex-1 py-2.5 border border-[#e2e8f0] rounded-xl font-medium text-gray-700 text-sm hover:bg-gray-50"
               >
                 Cancel
               </button>

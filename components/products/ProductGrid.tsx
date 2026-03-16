@@ -81,7 +81,7 @@ export function ProductGrid({ onAddItem, loading }: Props) {
               key={product.id}
               onClick={() => handleAdd(product)}
               disabled={!!addingId}
-              className={`relative text-left bg-white border border-gray-200 rounded-xl p-3 transition-all
+              className={`relative text-left bg-white border-none border-gray-200 rounded-xl p-3 transition-all
                 hover:border-blue-300 hover:shadow-sm active:scale-95
                 ${addingId && !isAdding ? "opacity-50" : ""}
                 ${isAdding ? "border-blue-400 shadow-sm" : ""}`}
