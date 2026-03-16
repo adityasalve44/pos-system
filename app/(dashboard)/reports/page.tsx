@@ -113,20 +113,24 @@ export default function ReportsPage() {
 
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div
-            className="rounded-xl p-4 border"
-            style={{ background: "var(--brand-light)" }}
+            className="rounded-xl p-4 border "
+            style={{ background: "var(--reports-revenue-bg)" }}
           >
+            
             <div
               className="flex items-center gap-1.5 text-xs font-medium mb-2"
               style={{ color: "var(--brand)" }}
             >
               <TrendingUp size={12} /> Revenue
             </div>
-            <div className="text-2xl font-bold text-gray-900">
+            <div className="text-2xl  font-bold text-gray-900 ">
               {formatCurrency(daily?.totalRevenue ?? 0)}
             </div>
           </div>
-          <div className="bg-blue-50 border rounded-xl p-4">
+          <div
+            className="border rounded-xl p-4"
+            style={{ background: "var(--reports-summary-bg)" }}
+          >
             <div className="flex items-center gap-1.5 text-xs font-medium text-blue-600 mb-2">
               <ShoppingBag size={12} /> Orders
             </div>

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useOrder, useCancelOrder, useAddItem } from "@/lib/hooks/useOrders";
+import { useSettings } from "@/lib/hooks/useProducts";
 import { ProductGrid } from "@/components/products/ProductGrid";
 import { OrderSheet } from "@/components/orders/OrderSheet";
 import { PaymentModal } from "@/components/billing/PaymentModal";
@@ -26,6 +27,7 @@ export default function OrderPage() {
   const role = session?.user?.role;
 
   const { data: order, isLoading } = useOrder(id);
+  const { data: settings } = useSettings();
   const addItem = useAddItem();
   const cancelOrder = useCancelOrder();
 
@@ -189,7 +191,10 @@ export default function OrderPage() {
         {/* Paid — receipt view */}
         {isPaid && view === "receipt" && (
           <div className="flex-1 overflow-y-auto p-4">
-            <ReceiptView order={order} />
+            <ReceiptView
+              order={order}
+              restaurantName={settings?.name ?? "Restaurant"}
+            />
           </div>
         )}
 
